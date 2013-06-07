@@ -1,0 +1,17 @@
+# MongoDB GridFS -> Amazon S3 backup / restore script
+
+## Backup
+
+Backup (GridFS -> S3) is roughly ordered by insertion date. MongoDB's `ObjectId` contains a timestamp in its most significant bytes.
+
+## Restore
+
+Restore (S3 -> GridFS) is ordered by lexicographical order, e.g.:
+
+    1
+    10
+    100
+    2
+    20
+    200
+    ...

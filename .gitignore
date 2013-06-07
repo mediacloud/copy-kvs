@@ -1,0 +1,4 @@
+.DS_Store
+gridfs-to-s3.yml
+*.last
+*.lock

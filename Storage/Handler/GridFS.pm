@@ -12,6 +12,9 @@ use MongoDB 0.700.0;
 use MongoDB::GridFS;
 use Data::Dumper;
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
 use Storage::Iterator::GridFS;
 
 # MongoDB's query timeout, in ms
@@ -48,7 +51,7 @@ sub BUILD {
 
     $_config_host = $args->{host} || 'localhost';
     $_config_port = $args->{port} || 27017;
-    $_config_database = $args->{database} or die "Database is not defined.";
+    $_config_database = $args->{database} or LOGDIE("Database is not defined.");
 }
 
 # Destructor
@@ -91,30 +94,30 @@ sub _connect_to_mongodb_or_die
     $_mongodb_client = MongoDB::MongoClient->new( host => $_config_host, port => $_config_port, query_timeout => MONGODB_QUERY_TIMEOUT );
     unless ( $_mongodb_client )
     {
-        die "Unable to connect to MongoDB ($_config_host:$_config_port).";
+        LOGDIE("Unable to connect to MongoDB ($_config_host:$_config_port).");
     }
 
     $_mongodb_database = $_mongodb_client->get_database( $_config_database );
     unless ( $_mongodb_database )
     {
-        die "Unable to choose a MongoDB database '$_config_database'.";
+        LOGDIE("Unable to choose a MongoDB database '$_config_database'.");
     }
 
     $_mongodb_fs_files_collection = $_mongodb_database->get_collection('fs.files');
     unless ($_mongodb_fs_files_collection) {
-        die "Unable to use MongoDB database's '$_config_database' collection 'fs.files'.";
+        LOGDIE("Unable to use MongoDB database's '$_config_database' collection 'fs.files'.");
     }
 
     $_mongodb_gridfs = $_mongodb_database->get_gridfs;
     unless ( $_mongodb_gridfs )
     {
-        die "Unable to use MongoDB database '$_config_database' as GridFS database.";
+        LOGDIE("Unable to use MongoDB database '$_config_database' as GridFS database.");
     }
 
     # Save PID
     $_pid = $$;
 
-    say STDERR "Connected to GridFS download storage ($_config_host:$_config_port/$_config_database) for PID $$.";
+    INFO("Connected to GridFS download storage ($_config_host:$_config_port/$_config_database).");
 }
 
 sub head($$)
@@ -161,7 +164,7 @@ sub put($$$)
     {
         if ( $retry > 0 )
         {
-            say STDERR "Retrying...";
+            WARN("Retrying...");
         }
 
         eval {
@@ -169,7 +172,7 @@ sub put($$$)
             # Remove file(s) if already exist(s) -- MongoDB might store several versions of the same file
             while ( my $file = $_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
             {
-                say STDERR "Removing existing file '$filename'.";
+                INFO("Removing existing file '$filename'....");
                 $self->delete( $filename );
             }
 
@@ -179,13 +182,13 @@ sub put($$$)
             $gridfs_id = $_mongodb_gridfs->put( $basic_fh, { 'filename' => $filename } );
             unless ( $gridfs_id )
             {
-                die "MongoDB's ObjectId is empty.";
+                LOGDIE("MongoDB's ObjectId is empty.");
             }
         };
 
         if ( $@ )
         {
-            say STDERR "Write to '$filename' didn't succeed because: $@";
+            WARN("Attempt to write to '$filename' didn't succeed because: $@");
         }
         else
         {
@@ -195,7 +198,7 @@ sub put($$$)
 
     unless ( $gridfs_id )
     {
-        die "Unable to store download '$filename' to GridFS after " . MONGODB_WRITE_RETRIES . " retries.";
+        LOGDIE("Unable to store download '$filename' to GridFS after " . MONGODB_WRITE_RETRIES . " retries.");
     }
 
     return 1;
@@ -217,7 +220,7 @@ sub get($$)
     {
         if ( $retry > 0 )
         {
-            say STDERR "Retrying...";
+            WARN("Retrying...");
         }
 
         eval {
@@ -229,7 +232,7 @@ sub get($$)
 
         if ( $@ )
         {
-            say STDERR "Read from '$filename' didn't succeed because: $@";
+            WARN("Attempt to read from '$filename' didn't succeed because: $@");
         }
         else
         {
@@ -239,12 +242,12 @@ sub get($$)
 
     unless ( $attempt_to_read_succeeded )
     {
-        die "Unable to read download '$filename' from GridFS after " . MONGODB_READ_RETRIES . " retries.";
+        LOGDIE("Unable to read download '$filename' from GridFS after " . MONGODB_READ_RETRIES . " retries.");
     }
 
     unless ( defined( $file ) )
     {
-        die "Could not get file from GridFS for filename '$filename'";
+        LOGDIE("Could not get file from GridFS for filename '$filename'");
     }
 
     my $content = $file->slurp;
@@ -265,11 +268,11 @@ sub list_iterator($;$)
         # Find the ObjectId of the offset filename
         $offset_objectid       = $_mongodb_fs_files_collection->find_one({ filename => $filename_offset }, {_id => 1});
         unless ($offset_objectid) {
-            die "Offset file '$filename_offset' was not found.";
+            LOGDIE("Offset file '$filename_offset' was not found.");
         }
         $offset_objectid = $offset_objectid->{_id}->{value};
         unless (valid_objectid($offset_objectid)) {
-            die "Offset file's '$filename_offset' ObjectId '$offset_objectid' is not valid.";
+            LOGDIE("Offset file's '$filename_offset' ObjectId '$offset_objectid' is not valid.");
         }
     }
 

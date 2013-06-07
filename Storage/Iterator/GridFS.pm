@@ -8,6 +8,9 @@ use warnings;
 use Moose;
 with 'Storage::Iterator';
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
 # for valid_objectid()
 use Storage::Handler::GridFS;
 
@@ -21,7 +24,7 @@ sub BUILD {
 
     $_cursor = $args->{cursor};
     unless ($_cursor) {
-        die "MongoDB result cursor is undefined";
+        LOGDIE("MongoDB result cursor is undefined.");
     }
 }
 
@@ -39,7 +42,7 @@ sub next($)
     my $object_filename = $object->{filename};
 
     unless (Storage::Handler::GridFS::valid_objectid($object_objectid)) {
-        die "File's '$object_filename' ObjectId '$object_objectid' is not valid.";
+        LOGDIE("File's '$object_filename' ObjectId '$object_objectid' is not valid.");
     }
 
     return $object_filename;

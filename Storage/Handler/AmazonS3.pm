@@ -8,6 +8,9 @@ use warnings;
 use Moose;
 with 'Storage::Handler';
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
 # Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket) doesn't seem to support manual markers
 use Net::Amazon::S3;
 
@@ -50,9 +53,9 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $_config_access_key_id = $args->{access_key_id} or die "Access key ID is not defined.";
-    $_config_secret_access_key = $args->{secret_access_key} or die "Secret access key is not defined.";
-    $_config_bucket_name = $args->{bucket_name} or die "Folder name is not defined.";
+    $_config_access_key_id = $args->{access_key_id} or LOGDIE("Access key ID is not defined.");
+    $_config_secret_access_key = $args->{secret_access_key} or LOGDIE("Secret access key is not defined.");
+    $_config_bucket_name = $args->{bucket_name} or LOGDIE("Folder name is not defined.");
     $_config_folder_name = $args->{folder_name} || '';
 
     # Add slash to the end of the folder name (if it doesn't exist yet)
@@ -93,7 +96,7 @@ sub _initialize_s3_or_die
     );
     unless ( $_s3 )
     {
-        die "Unable to initialize Net::Amazon::S3 instance with access key '$_config_access_key_id'.";
+        LOGDIE("Unable to initialize Net::Amazon::S3 instance with access key '$_config_access_key_id'.");
     }
 
     # Get the bucket ($_s3->bucket would not verify that the bucket exists)
@@ -107,14 +110,14 @@ sub _initialize_s3_or_die
     }
     unless ( $_s3_bucket )
     {
-        die "Unable to get bucket '$_config_bucket_name'.";
+        LOGDIE("Unable to get bucket '$_config_bucket_name'.");
     }
 
     # Save PID
     $_pid = $$;
 
     my $path = ( $_config_folder_name ? "$_config_bucket_name/$_config_folder_name" : "$_config_bucket_name" );
-    say STDERR "Initialized Amazon S3 download storage at '$path' for PID $$.";
+    INFO("Initialized Amazon S3 download storage at '$path'.");
 }
 
 sub _path_for_filename($)
@@ -122,7 +125,7 @@ sub _path_for_filename($)
     my $filename = shift;
 
     unless ($filename) {
-        die "Filename is empty.";
+        LOGDIE("Filename is empty.");
     }
 
     if ($_config_folder_name ne '' and $_config_folder_name ne '/') {
@@ -155,11 +158,11 @@ sub delete($$)
     {
         unless ( $self->head( $filename ) )
         {
-            die "File '$filename' does not exist.";
+            LOGDIE("File '$filename' does not exist.");
         }
     }
 
-    $_s3_bucket->delete_key(_path_for_filename($filename)) or die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
+    $_s3_bucket->delete_key(_path_for_filename($filename)) or LOGDIE($_s3_bucket->err . ": " . $_s3_bucket->errstr);
 
     return 1;
 }
@@ -174,12 +177,13 @@ sub put($$$)
     {
         if ( $self->head( $filename ) )
         {
-            say STDERR "File '$filename' already exists, " .
-              "will store a new version or overwrite (depending on whether or not versioning is enabled).";
+            WARN("File '$filename' already exists, " .
+              "will store a new version or overwrite ".
+              "(depending on whether or not versioning is enabled).");
         }
     }
 
-    $_s3_bucket->add_key(_path_for_filename($filename), $contents) or die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
+    $_s3_bucket->add_key(_path_for_filename($filename), $contents) or LOGDIE($_s3_bucket->err . ": " . $_s3_bucket->errstr);
 
     return 1;
 }
@@ -194,13 +198,13 @@ sub get($$)
     {
         unless ( $self->head( $filename ) )
         {
-            die "File '$filename' does not exist.";
+            LOGDIE("File '$filename' does not exist.");
         }
     }
 
     my $contents = $_s3_bucket->get_key(_path_for_filename($filename));
     unless (defined($contents)) {
-        die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
+        LOGDIE($_s3_bucket->err . ": " . $_s3_bucket->errstr);
     }
 
     return $contents->{value};

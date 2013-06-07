@@ -8,6 +8,9 @@ use Storage::Handler::GridFS;
 
 use YAML qw(LoadFile);
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
 # Global variable so it can be used by _sigint() and _log_last_copied_file()
 my $_config;
 
@@ -32,14 +35,14 @@ sub main
 {
 	unless ($ARGV[0])
 	{
-		die "Usage: $0 config.yml\n";
+		LOGDIE("Usage: $0 config.yml");
 	}
 
-	$_config = LoadFile($ARGV[0]) or die "Unable to read configuration from '$ARGV[0]': $!";
+	$_config = LoadFile($ARGV[0]) or LOGDIE("Unable to read configuration from '$ARGV[0]': $!");
 
     # Create lock file
     if (-e $_config->{backup_lock_file}) {
-        die "Lock file '$_config->{backup_lock_file}' already exists.";
+        LOGDIE("Lock file '$_config->{backup_lock_file}' already exists.");
     }
     open LOCK, ">$_config->{backup_lock_file}";
     print LOCK "$$";
@@ -69,14 +72,14 @@ sub main
         chomp $offset_filename;
         close LAST;
 
-        say STDERR "Will resume from '$offset_filename'.";
+        INFO("Will resume from '$offset_filename'.");
     }
 
     # Copy
     my $list_iterator = $gridfs->list_iterator($offset_filename);
     while (my $filename = $list_iterator->next())
     {
-        say STDERR "Copying '$filename'...";
+        INFO("Copying '$filename'...");
         $amazons3->put($filename, $gridfs->get($filename));
 
         $_last_copied_filename = $filename;

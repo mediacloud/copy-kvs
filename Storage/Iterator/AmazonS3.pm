@@ -9,6 +9,9 @@ use Moose;
 with 'Storage::Iterator';
 use Data::Dumper;
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
 my $_bucket = undef;
 my $_prefix = undef;
 my $_offset = undef;
@@ -21,7 +24,7 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $_bucket = $args->{bucket} or die "Bucket is undefined.";
+    $_bucket = $args->{bucket} or LOGDIE("Bucket is undefined.");
     $_prefix = $args->{prefix} || '';   # No prefix (folder)
     $_offset = $args->{offset} || '';   # No offset (list from beginning)
 }
@@ -45,14 +48,14 @@ sub next()
 
         # Fetch a new chunk
         my $list = $_bucket->list({prefix => $_prefix,
-                                  marker => $_prefix . $_offset}) or die "Unable to fetch the next list of files.";
+                                  marker => $_prefix . $_offset}) or LOGDIE("Unable to fetch the next list of files.");
         $_offset = _strip_prefix($list->{next_marker}, $_prefix);
         unless ($list->{is_truncated}) {
             $_end_of_data = 1;
         }
 
         for my $filename (@{$list->{keys}}) {
-            $filename = _strip_prefix($filename->{key}, $_prefix) or die "Empty filename.";
+            $filename = _strip_prefix($filename->{key}, $_prefix) or LOGDIE("Empty filename.");
             push (@_filenames, $filename);
         }
     }

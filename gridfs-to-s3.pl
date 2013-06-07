@@ -7,9 +7,14 @@ use Storage::Handler::AmazonS3;
 use Storage::Handler::GridFS;
 
 use YAML qw(LoadFile);
+use Data::Dumper;
+
+use Parallel::Fork::BossWorkerAsync;
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+
+use constant WORKER_GLOBAL_TIMEOUT => 10;
 
 # Global variable so it can be used by:
 # * _sigint() -- called independently from main()
@@ -20,6 +25,10 @@ my $_config;
 # * _log_last_copied_file() -- might be called by _sigint()
 my $_last_copied_filename;
 
+# PID of the main process (only the "boss" process will have the
+# right to write down the last copied filename)
+my $_main_process_pid = 0;
+
 # GridFS handlers (PID => $handler)
 my %_gridfs_handlers;
 
@@ -28,9 +37,14 @@ my %_s3_handlers;
 
 sub _log_last_copied_file
 {
-    open LAST, ">$_config->{file_with_last_backed_up_filename}";
-    print LAST $_last_copied_filename;
-    close LAST;
+    if ($$ == $_main_process_pid)
+    {
+        if (defined $_last_copied_filename) {
+            open LAST, ">$_config->{file_with_last_backed_up_filename}";
+            print LAST $_last_copied_filename;
+            close LAST;
+        }
+    }
 }
 
 sub _sigint
@@ -46,6 +60,8 @@ sub main
 	{
 		LOGDIE("Usage: $0 config.yml");
 	}
+
+    $_main_process_pid = $$;
 
 	$_config = LoadFile($ARGV[0]) or LOGDIE("Unable to read configuration from '$ARGV[0]': $!");
 
@@ -71,16 +87,57 @@ sub main
         INFO("Will resume from '$offset_filename'.");
     }
 
+    my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
+    my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+
+    # Initialize worker manager
+    my $bw = Parallel::Fork::BossWorkerAsync->new(
+        work_handler    => \&upload_file_to_s3,
+        global_timeout  => WORKER_GLOBAL_TIMEOUT,
+        worker_count => $worker_threads,
+    );
+
     # Copy
     my $gridfs = _gridfs_handler_for_pid($$, $_config);
     my $list_iterator = $gridfs->list_iterator($offset_filename);
-    while (my $filename = $list_iterator->next())
+    my $have_files_left = 1;
+    while ($have_files_left)
     {
-        upload_file_to_s3({filename => $filename, config => $_config});
+        my $filename;
 
-        $_last_copied_filename = $filename;
+        for (my $x = 0; $x < $job_chunk_size; ++$x)
+        {
+            my $f = $list_iterator->next();
+            if ($f) {
+                # Filename to copy
+                $filename = $f;
+            } else {
+                # No filenames left to copy, leave $filename at the last filename copied
+                # so that _last_copied_filename() can write that down
+                $have_files_left = 0;
+                last;
+            }
+            DEBUG("Enqueueing filename '$filename'");
+            $bw->add_work({filename => $filename, config => $_config});
+        }
 
+        while ($bw->pending()) {
+            my $ref = $bw->get_result();
+            if ($ref->{ERROR}) {
+                LOGDIE("Job error: $ref->{ERROR}");
+            } else {
+                DEBUG("Backed up file '$ref->{filename}'");
+            }
+        }
+
+        # Store the last filename from the chunk as the last copied
+        if ($filename) {
+            $_last_copied_filename = $filename;
+            _log_last_copied_file();
+        }
     }
+
+    $bw->shut_down();
 
     # Remove lock file
     unlink $_config->{backup_lock_file};

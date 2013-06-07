@@ -13,6 +13,14 @@ use Data::Dumper;
 
 use YAML qw(LoadFile);
 
+# Global variable so it can be used by sigint()
+my $_config;
+
+sub sigint
+{
+    unlink $_config->{backup_lock_file};
+    exit( 1 );
+}
 
 sub main
 {
@@ -21,36 +29,42 @@ sub main
 		die "Usage: $0 config.yml\n";
 	}
 
-	# Load configuration
-	my $config;
-	eval {
-		$config = LoadFile($ARGV[0]);
-	};
-	if ($@)
-	{
-		die "Unable to read configuration from '$ARGV[0]': $!";
-	}
+	$_config = LoadFile($ARGV[0]) or die "Unable to read configuration from '$ARGV[0]': $!";
+
+    # Create lock file
+    if (-e $_config->{backup_lock_file}) {
+        die "Lock file '$_config->{backup_lock_file}' already exists.";
+    }
+    open LOCK, ">$_config->{backup_lock_file}";
+    print LOCK "$$";
+    close LOCK;
+
+    # Catch SIGINTs to clean up the lock file
+    $SIG{ 'INT' } = 'sigint';
 
 	# Initialize storage methods
 	my $amazons3 = Storage::Handler::AmazonS3->new(
-		access_key_id => $config->{amazon_s3}->{access_key_id},
-		secret_access_key => $config->{amazon_s3}->{secret_access_key},
-		bucket_name => $config->{amazon_s3}->{bucket_name},
-		folder_name => $config->{amazon_s3}->{folder_name} || ''
+		access_key_id => $_config->{amazon_s3}->{access_key_id},
+		secret_access_key => $_config->{amazon_s3}->{secret_access_key},
+		bucket_name => $_config->{amazon_s3}->{bucket_name},
+		folder_name => $_config->{amazon_s3}->{folder_name} || ''
 	);
 	my $gridfs = Storage::Handler::GridFS->new(
-		host => $config->{mongodb_gridfs}->{host} || 'localhost',
-		port => $config->{mongodb_gridfs}->{port} || 27017,
-		database => $config->{mongodb_gridfs}->{database}
+		host => $_config->{mongodb_gridfs}->{host} || 'localhost',
+		port => $_config->{mongodb_gridfs}->{port} || 27017,
+		database => $_config->{mongodb_gridfs}->{database}
 	);
 
     # Copy
-    my $list_iterator = $gridfs->list_iterator();
+    my $list_iterator = $gridfs->list_iterator('100');
     while (my $filename = $list_iterator->next())
     {
         say STDERR "Copying '$filename'...";
         $amazons3->put($filename, $gridfs->get($filename));
     }
+
+    # Remove lock file
+    unlink $_config->{backup_lock_file};
 }
 
 main();

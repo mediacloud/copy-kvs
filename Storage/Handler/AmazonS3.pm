@@ -174,7 +174,7 @@ sub delete($$)
 
 sub put($$$)
 {
-    my ( $self, $filename, $content_ref ) = @_;
+    my ( $self, $filename, $contents ) = @_;
 
     _initialize_s3_or_die();
 
@@ -188,9 +188,8 @@ sub put($$$)
     }
 
     # Will die() on failure
-    my $content_to_store = $$content_ref;
     my $object = _object_for_filename( $filename );
-    $object->put( $content_to_store );
+    $object->put( $contents );
 
     return 1;
 }
@@ -213,7 +212,7 @@ sub get($$)
     my $object          = _object_for_filename( $filename );
     my $content = $object->get;
 
-    return \$content;
+    return $content;
 }
 
 sub list_iterator($;$)

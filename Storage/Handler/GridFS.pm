@@ -149,11 +149,9 @@ sub delete($$)
 
 sub put($$$)
 {
-    my ( $self, $filename, $content_ref ) = @_;
+    my ( $self, $filename, $contents ) = @_;
 
     _connect_to_mongodb_or_die();
-
-    my $content_to_store = $$content_ref;
 
     my $gridfs_id;
 
@@ -177,7 +175,7 @@ sub put($$$)
 
             # Write
             my $basic_fh;
-            open( $basic_fh, '<', \$content_to_store );
+            open( $basic_fh, '<', \$contents );
             $gridfs_id = $_mongodb_gridfs->put( $basic_fh, { 'filename' => $filename } );
             unless ( $gridfs_id )
             {
@@ -251,7 +249,7 @@ sub get($$)
 
     my $content = $file->slurp;
 
-    return \$content;
+    return $content;
 }
 
 sub list_iterator($;$)
@@ -283,20 +281,7 @@ sub list_iterator($;$)
     # Sort by ObjectId because it is indexed and contains an insertion timestamp
     my $cursor = $_mongodb_fs_files_collection->query($find_query)->sort({_id => 1})->fields({_id=>1, filename=>1});
     my $iterator = Storage::Iterator::GridFS->new(cursor => $cursor);
-    my @objects = $cursor->all;
-    
-    # Validate ObjectIds
-    for my $object (@objects) {
-        my $object_objectid = $object->{_id}->{value};
-        my $object_filename = $object->{filename};
-        unless (valid_objectid($object_objectid)) {
-            die "File's '$object_filename' ObjectId '$object_objectid' is not valid.";
-        }
-
-        push (@{$filenames}, $object_filename);
-    }
-
-    return $filenames;
+    return $iterator;
 }
 
 no Moose;    # gets rid of scaffolding

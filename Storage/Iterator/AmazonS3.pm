@@ -7,6 +7,7 @@ use warnings;
 
 use Moose;
 with 'Storage::Iterator';
+use Data::Dumper;
 
 my $_bucket = undef;
 my $_prefix = undef;
@@ -43,15 +44,15 @@ sub next()
         }
 
         # Fetch a new chunk
-        my $list = $_bucket->list(prefix => $_prefix,
-                                  marker => $_prefix . $_offset) or die "Unable to fetch the next list of files.";
+        my $list = $_bucket->list({prefix => $_prefix,
+                                  marker => $_prefix . $_offset}) or die "Unable to fetch the next list of files.";
         $_offset = _strip_prefix($list->{next_marker}, $_prefix);
         unless ($list->{is_truncated}) {
             $_end_of_data = 1;
         }
 
         for my $filename (@{$list->{keys}}) {
-            $filename = _strip_prefix($filename, $_prefix) or die "Empty filename.";
+            $filename = _strip_prefix($filename->{key}, $_prefix) or die "Empty filename.";
             push (@_filenames, $filename);
         }
     }

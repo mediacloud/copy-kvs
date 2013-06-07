@@ -8,9 +8,10 @@ use warnings;
 use Moose;
 with 'Storage::Handler';
 
+# Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket) doesn't seem to support manual markers
 use Net::Amazon::S3;
-use Net::Amazon::S3::Client;
-use Net::Amazon::S3::Client::Bucket;
+
+use Data::Dumper;
 
 use Storage::Iterator::AmazonS3;
 
@@ -38,7 +39,6 @@ my $_config_folder_name;
 
 # Net::Amazon::S3 instance, bucket (lazy-initialized to prevent multiple forks using the same object)
 my $_s3                       = undef;
-my $_s3_client                = undef;
 my $_s3_bucket                = undef;
 
 # Process PID (to prevent forks attempting to clone the Net::Amazon::S3 accessor objects)
@@ -68,7 +68,6 @@ sub DEMOLISH
 
     # Setting instances to undef should take care of the cleanup automatically
     $_s3_bucket = undef;
-    $_s3_client = undef;
     $_s3        = undef;
     $_pid       = 0;
 }
@@ -96,13 +95,12 @@ sub _initialize_s3_or_die
     {
         die "Unable to initialize Net::Amazon::S3 instance with access key '$_config_access_key_id'.";
     }
-    $_s3_client = Net::Amazon::S3::Client->new( s3 => $_s3 );
 
     # Get the bucket ($_s3->bucket would not verify that the bucket exists)
-    my @buckets = $_s3_client->buckets;
-    foreach my $bucket ( @buckets )
+    my $response = $_s3->buckets;
+    foreach my $bucket ( @{ $response->{buckets} } )
     {
-        if ( $bucket->name eq $_config_bucket_name )
+        if ( $bucket->bucket eq $_config_bucket_name )
         {
             $_s3_bucket = $bucket;
         }
@@ -119,19 +117,19 @@ sub _initialize_s3_or_die
     say STDERR "Initialized Amazon S3 download storage at '$path' for PID $$.";
 }
 
-sub _object_for_filename($)
+sub _path_for_filename($)
 {
     my $filename = shift;
 
-    unless ( $filename )
-    {
+    unless ($filename) {
         die "Filename is empty.";
     }
 
-    my $key = $_config_folder_name . $filename;
-    my $object = $_s3_bucket->object( key => $key );
-
-    return $object;
+    if ($_config_folder_name ne '' and $_config_folder_name ne '/') {
+        return $_config_folder_name . $filename;
+    } else {
+        return $filename;
+    }
 }
 
 sub head($$)
@@ -140,13 +138,9 @@ sub head($$)
 
     _initialize_s3_or_die();
 
-    my $object = _object_for_filename( $filename );
-    if ( $object->exists )
-    {
+    if ($_s3_bucket->head_key(_path_for_filename($filename))) {
         return 1;
-    }
-    else
-    {
+    } else {
         return 0;
     }
 }
@@ -165,9 +159,7 @@ sub delete($$)
         }
     }
 
-    my $object = _object_for_filename( $filename );
-
-    $object->delete;
+    $_s3_bucket->delete_key(_path_for_filename($filename)) or die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
 
     return 1;
 }
@@ -187,9 +179,7 @@ sub put($$$)
         }
     }
 
-    # Will die() on failure
-    my $object = _object_for_filename( $filename );
-    $object->put( $contents );
+    $_s3_bucket->add_key(_path_for_filename($filename), $contents) or die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
 
     return 1;
 }
@@ -208,11 +198,12 @@ sub get($$)
         }
     }
 
-    # Will die() on failure
-    my $object          = _object_for_filename( $filename );
-    my $content = $object->get;
+    my $contents = $_s3_bucket->get_key(_path_for_filename($filename));
+    unless (defined($contents)) {
+        die $_s3_bucket->err . ": " . $_s3_bucket->errstr;
+    }
 
-    return $content;
+    return $contents->{value};
 }
 
 sub list_iterator($;$)

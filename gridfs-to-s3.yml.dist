@@ -17,10 +17,10 @@ file_with_last_backed_up_filename	: "gridfs-to-s3-backup.last"
 file_with_last_restored_filename	: "gridfs-to-s3-restore.last"
 
 # How many worker threads to spawn
-worker_threads	: 8
+worker_threads	: 32
 
 # How many jobs to add to the job pool at once
-job_chunk_size	: 100
+job_chunk_size	: 512
 
 # MongoDB GridFS connection settings
 mongodb_gridfs:

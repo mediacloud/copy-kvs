@@ -6,11 +6,6 @@ use warnings;
 use Storage::Handler::AmazonS3;
 use Storage::Handler::GridFS;
 
-use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
-
-use Data::Dumper;
-
 use YAML qw(LoadFile);
 
 # Global variable so it can be used by _sigint() and _log_last_copied_file()

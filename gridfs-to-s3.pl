@@ -13,11 +13,22 @@ use Data::Dumper;
 
 use YAML qw(LoadFile);
 
-# Global variable so it can be used by sigint()
+# Global variable so it can be used by _sigint() and _log_last_copied_file()
 my $_config;
 
-sub sigint
+# Global variable so it can be used by _log_last_copied_file()
+my $_last_copied_filename;
+
+sub _log_last_copied_file
 {
+    open LAST, ">$_config->{file_with_last_backed_up_filename}";
+    print LAST $_last_copied_filename;
+    close LAST;
+}
+
+sub _sigint
+{
+    _log_last_copied_file();
     unlink $_config->{backup_lock_file};
     exit( 1 );
 }
@@ -39,8 +50,8 @@ sub main
     print LOCK "$$";
     close LOCK;
 
-    # Catch SIGINTs to clean up the lock file
-    $SIG{ 'INT' } = 'sigint';
+    # Catch SIGINTs to clean up the lock file and cleanly write the last copied file
+    $SIG{ 'INT' } = '_sigint';
 
 	# Initialize storage methods
 	my $amazons3 = Storage::Handler::AmazonS3->new(
@@ -55,12 +66,26 @@ sub main
 		database => $_config->{mongodb_gridfs}->{database}
 	);
 
+    # Read last copied filename
+    my $offset_filename;
+    if (-e $_config->{file_with_last_backed_up_filename}) {
+        open LAST, "<$_config->{file_with_last_backed_up_filename}";
+        $offset_filename = <LAST>;
+        chomp $offset_filename;
+        close LAST;
+
+        say STDERR "Will resume from '$offset_filename'.";
+    }
+
     # Copy
-    my $list_iterator = $gridfs->list_iterator('100');
+    my $list_iterator = $gridfs->list_iterator($offset_filename);
     while (my $filename = $list_iterator->next())
     {
         say STDERR "Copying '$filename'...";
         $amazons3->put($filename, $gridfs->get($filename));
+
+        $_last_copied_filename = $filename;
+
     }
 
     # Remove lock file

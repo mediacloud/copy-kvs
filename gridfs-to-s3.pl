@@ -3,16 +3,12 @@
 use strict;
 use warnings;
 
-use Storage::Handler::AmazonS3;
-use Storage::Handler::GridFS;
+require 'gridfs-to-s3.inc.pl';
 
 use YAML qw(LoadFile);
 use Data::Dumper;
 
 use Parallel::Fork::BossWorkerAsync;
-
-use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
 # Global variable so it can be used by:
 # * _sigint() -- called independently from main()
@@ -27,11 +23,6 @@ my $_last_copied_filename;
 # right to write down the last copied filename)
 my $_main_process_pid = 0;
 
-# GridFS handlers (PID => $handler)
-my %_gridfs_handlers;
-
-# S3 handlers (PID => $handler)
-my %_s3_handlers;
 
 sub _log_last_copied_file
 {
@@ -140,51 +131,6 @@ sub main
 
     # Remove lock file
     unlink $_config->{backup_lock_file};
-}
-
-sub _gridfs_handler_for_pid($$)
-{
-    my ($pid, $config) = @_;
-
-    unless (exists $_gridfs_handlers{$pid}) {
-        $_gridfs_handlers{$pid} = Storage::Handler::GridFS->new(
-            host => $config->{mongodb_gridfs}->{host} || 'localhost',
-            port => $config->{mongodb_gridfs}->{port} || 27017,
-            database => $config->{mongodb_gridfs}->{database}
-        );
-        unless ($_gridfs_handlers{$pid}) {
-            LOGDIE("Unable to initialize GridFS handler for PID $pid");
-        }
-    }
-
-    if (scalar keys %_gridfs_handlers > 100) {
-        LOGDIE("Too many GridFS handlers initialized. Strange.");
-    }
-
-    return $_gridfs_handlers{$pid};
-}
-
-sub _s3_handler_for_pid($$)
-{
-    my ($pid, $config) = @_;
-
-    unless (exists $_s3_handlers{$pid}) {
-        $_s3_handlers{$pid} = Storage::Handler::AmazonS3->new(
-            access_key_id => $config->{amazon_s3}->{access_key_id},
-            secret_access_key => $config->{amazon_s3}->{secret_access_key},
-            bucket_name => $config->{amazon_s3}->{bucket_name},
-            folder_name => $config->{amazon_s3}->{folder_name} || ''
-        );
-        unless ($_s3_handlers{$pid}) {
-            LOGDIE("Unable to initialize S3 handler for PID $pid");
-        }
-    }
-
-    if (scalar keys %_s3_handlers > 100) {
-        LOGDIE("Too many S3 handlers initialized. Strange.");
-    }
-
-    return $_s3_handlers{$pid};
 }
 
 sub upload_file_to_s3

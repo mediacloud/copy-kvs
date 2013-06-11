@@ -12,11 +12,11 @@ use Parallel::Fork::BossWorkerAsync;
 
 # Global variable so it can be used by:
 # * _sigint() -- called independently from main()
-# * _log_last_copied_file() -- might be called by _sigint()
+# * _log_last_copied_file_from_s3_to_gridfs() -- might be called by _sigint()
 my $_config;
 
 # Global variable so it can be used by:
-# * _log_last_copied_file() -- might be called by _sigint()
+# * _log_last_copied_file_from_s3_to_gridfs() -- might be called by _sigint()
 my $_last_copied_filename;
 
 # PID of the main process (only the "boss" process will have the
@@ -24,12 +24,12 @@ my $_last_copied_filename;
 my $_main_process_pid = 0;
 
 
-sub _log_last_copied_file
+sub _log_last_copied_file_from_s3_to_gridfs
 {
     if ($$ == $_main_process_pid)
     {
         if (defined $_last_copied_filename) {
-            open LAST, ">$_config->{file_with_last_backed_up_filename}";
+            open LAST, ">$_config->{file_with_last_restored_filename}";
             print LAST $_last_copied_filename;
             close LAST;
         }
@@ -38,8 +38,8 @@ sub _log_last_copied_file
 
 sub _sigint
 {
-    _log_last_copied_file();
-    unlink $_config->{backup_lock_file};
+    _log_last_copied_file_from_s3_to_gridfs();
+    unlink $_config->{restore_lock_file};
     exit( 1 );
 }
 
@@ -55,10 +55,10 @@ sub main
 	$_config = LoadFile($ARGV[0]) or LOGDIE("Unable to read configuration from '$ARGV[0]': $!");
 
     # Create lock file
-    if (-e $_config->{backup_lock_file}) {
-        LOGDIE("Lock file '$_config->{backup_lock_file}' already exists.");
+    if (-e $_config->{restore_lock_file}) {
+        LOGDIE("Lock file '$_config->{restore_lock_file}' already exists.");
     }
-    open LOCK, ">$_config->{backup_lock_file}";
+    open LOCK, ">$_config->{restore_lock_file}";
     print LOCK "$$";
     close LOCK;
 
@@ -67,8 +67,8 @@ sub main
 
     # Read last copied filename
     my $offset_filename;
-    if (-e $_config->{file_with_last_backed_up_filename}) {
-        open LAST, "<$_config->{file_with_last_backed_up_filename}";
+    if (-e $_config->{file_with_last_restored_filename}) {
+        open LAST, "<$_config->{file_with_last_restored_filename}";
         $offset_filename = <LAST>;
         chomp $offset_filename;
         close LAST;
@@ -82,14 +82,14 @@ sub main
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
-        work_handler    => \&upload_file_to_s3,
+        work_handler    => \&download_file_to_gridfs,
         global_timeout  => $worker_timeout,
         worker_count => $worker_threads,
     );
 
     # Copy
-    my $gridfs = _gridfs_handler_for_pid($$, $_config);
-    my $list_iterator = $gridfs->list_iterator($offset_filename);
+    my $amazons3 = _s3_handler_for_pid($$, $_config);
+    my $list_iterator = $amazons3->list_iterator($offset_filename);
     my $have_files_left = 1;
     while ($have_files_left)
     {
@@ -116,24 +116,24 @@ sub main
             if ($ref->{ERROR}) {
                 LOGDIE("Job error: $ref->{ERROR}");
             } else {
-                DEBUG("Backed up file '$ref->{filename}'");
+                DEBUG("Restored file '$ref->{filename}'");
             }
         }
 
         # Store the last filename from the chunk as the last copied
         if ($filename) {
             $_last_copied_filename = $filename;
-            _log_last_copied_file();
+            _log_last_copied_file_from_s3_to_gridfs();
         }
     }
 
     $bw->shut_down();
 
     # Remove lock file
-    unlink $_config->{backup_lock_file};
+    unlink $_config->{restore_lock_file};
 }
 
-sub upload_file_to_s3
+sub download_file_to_gridfs
 {
     my ($job) = @_;
 
@@ -141,11 +141,11 @@ sub upload_file_to_s3
     my $config = $job->{config};
 
     # Get storage handlers for current thread (PID)
-    my $gridfs = _gridfs_handler_for_pid($$, $config);
     my $amazons3 = _s3_handler_for_pid($$, $config);
+    my $gridfs = _gridfs_handler_for_pid($$, $config);
 
     INFO("Copying '$filename'...");
-    $amazons3->put($filename, $gridfs->get($filename));
+    $gridfs->put($filename, $amazons3->get($filename));
 
     return { filename => $filename };
 }

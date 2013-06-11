@@ -5,32 +5,36 @@
 ---
 
 # Backup lock file (must be writable)
-backup_lock_file		: "gridfs-to-s3-backup.lock"
+backup_lock_file        : "gridfs-to-s3-backup.lock"
 
 # Restore lock file (must be writable)
-restore_lock_file		: "gridfs-to-s3-restore.last"
+restore_lock_file       : "gridfs-to-s3-restore.last"
 
 # File with the last backed up filename
-file_with_last_backed_up_filename	: "gridfs-to-s3-backup.last"
+file_with_last_backed_up_filename   : "gridfs-to-s3-backup.last"
 
 # File with the last restored filename
-file_with_last_restored_filename	: "gridfs-to-s3-restore.last"
+file_with_last_restored_filename    : "gridfs-to-s3-restore.last"
+
+# Global timeout for each of the workers
+# (how much to wait for the upload / download to be completed, in seconds)
+worker_timeout  : 10
 
 # How many worker threads to spawn
-worker_threads	: 32
+worker_threads  : 32
 
 # How many jobs to add to the job pool at once
-job_chunk_size	: 512
+job_chunk_size  : 512
 
 # MongoDB GridFS connection settings
 mongodb_gridfs:
-    host		: "localhost" 
-    port		: "27017" 
-    database	: "my_files"
+    host        : "localhost" 
+    port        : "27017" 
+    database    : "my_files"
 
 # Amazon S3 connection settings
 amazon_s3:
-    access_key_id			: "AKIAIOSFODNN7EXAMPLE"
-    secret_access_key   	: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
+    access_key_id           : "AKIAIOSFODNN7EXAMPLE"
+    secret_access_key       : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
     bucket_name             : "backup-gridfs"
-    downloads_folder_name   : "backup"	# May be empty
+    downloads_folder_name   : "backup"  # May be empty

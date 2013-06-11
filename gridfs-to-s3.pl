@@ -14,8 +14,6 @@ use Parallel::Fork::BossWorkerAsync;
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
-use constant WORKER_GLOBAL_TIMEOUT => 10;
-
 # Global variable so it can be used by:
 # * _sigint() -- called independently from main()
 # * _log_last_copied_file() -- might be called by _sigint()
@@ -87,13 +85,14 @@ sub main
         INFO("Will resume from '$offset_filename'.");
     }
 
+    my $worker_timeout = $_config->{worker_timeout} or LOGDIE("Invalid worker timeout ('worker_timeout').");
     my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
     my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
         work_handler    => \&upload_file_to_s3,
-        global_timeout  => WORKER_GLOBAL_TIMEOUT,
+        global_timeout  => $worker_timeout,
         worker_count => $worker_threads,
     );
 

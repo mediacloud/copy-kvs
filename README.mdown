@@ -1,4 +1,4 @@
-# MongoDB GridFS -> Amazon S3 copy script
+# MongoDB GridFS <-> Amazon S3 copy script
 
 This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to [Amazon S3][s3] and vice versa.
 

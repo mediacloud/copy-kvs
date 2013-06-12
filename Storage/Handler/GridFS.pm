@@ -10,7 +10,6 @@ with 'Storage::Handler';
 
 use MongoDB 0.700.0;
 use MongoDB::GridFS;
-use Data::Dumper;
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});

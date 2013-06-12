@@ -7,7 +7,6 @@ use warnings;
 
 use Moose;
 with 'Storage::Iterator';
-use Data::Dumper;
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});

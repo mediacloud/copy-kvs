@@ -14,8 +14,6 @@ Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]:
 # Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket) doesn't seem to support manual markers
 use Net::Amazon::S3;
 
-use Data::Dumper;
-
 use Storage::Iterator::AmazonS3;
 
 # Should the Amazon S3 module use secure (SSL-encrypted) connections?

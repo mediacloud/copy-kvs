@@ -6,7 +6,6 @@ use warnings;
 require 'gridfs-to-s3.inc.pl';
 
 use YAML qw(LoadFile);
-use Data::Dumper;
 
 use Parallel::Fork::BossWorkerAsync;
 

@@ -1,14 +1,15 @@
 #
-# MongoDB GridFS -> Amazon S3 backup / restore script configuration
+# MongoDB GridFS -> Amazon S3 copy script configuration
 #
 
 ---
 
-# Backup lock file (must be writable)
-backup_lock_file        : "gridfs-to-s3-backup.lock"
-
-# Restore lock file (must be writable)
-restore_lock_file       : "gridfs-to-s3-restore.last"
+# Lock file
+#
+# The script will create the lock file when started; if the lock file is
+# present, another instance of the script will refuse to start. This is to
+# prevent multiple instances of the script from doing the same thing.
+lock_file        : "gridfs-to-s3.lock"
 
 # File with the last backed up filename
 file_with_last_backed_up_filename   : "gridfs-to-s3-backup.last"

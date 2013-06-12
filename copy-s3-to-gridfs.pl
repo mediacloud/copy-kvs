@@ -38,7 +38,7 @@ sub _log_last_copied_file_from_s3_to_gridfs
 sub _sigint
 {
     _log_last_copied_file_from_s3_to_gridfs();
-    unlink $_config->{restore_lock_file};
+    unlink $_config->{lock_file};
     exit( 1 );
 }
 
@@ -54,10 +54,10 @@ sub main
 	$_config = LoadFile($ARGV[0]) or LOGDIE("Unable to read configuration from '$ARGV[0]': $!");
 
     # Create lock file
-    if (-e $_config->{restore_lock_file}) {
-        LOGDIE("Lock file '$_config->{restore_lock_file}' already exists.");
+    if (-e $_config->{lock_file}) {
+        LOGDIE("Lock file '$_config->{lock_file}' already exists.");
     }
-    open LOCK, ">$_config->{restore_lock_file}";
+    open LOCK, ">$_config->{lock_file}";
     print LOCK "$$";
     close LOCK;
 
@@ -129,7 +129,7 @@ sub main
     $bw->shut_down();
 
     # Remove lock file
-    unlink $_config->{restore_lock_file};
+    unlink $_config->{lock_file};
 }
 
 sub download_file_to_gridfs

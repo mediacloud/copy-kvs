@@ -12,7 +12,7 @@ use Storage::Iterator;
 
 
 # Fetch file
-# returns reference to file's contents on success; dies on error
+# returns file contents on success; dies on error
 requires 'get';
 
 # Store file

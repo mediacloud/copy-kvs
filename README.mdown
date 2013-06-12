@@ -1,17 +1,102 @@
-# MongoDB GridFS -> Amazon S3 backup / restore script
+# MongoDB GridFS -> Amazon S3 copy script
 
-## Backup
+This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to [Amazon S3][s3] and vice versa.
 
-Backup (GridFS -> S3) is roughly ordered by insertion date. MongoDB's `ObjectId` contains a timestamp in its most significant bytes.
 
-## Restore
+## Usage
 
-Restore (S3 -> GridFS) is ordered by lexicographical order, e.g.:
+1. Copy configuration template file `gridfs-to-s3.yml.dist` to `gridfs-to-s3.yml`.
+2. Edit configuration file `gridfs-to-s3.yml` to set the MongoDB and GridFS connection settings and other properties.
+3. To copy files **from GridFS to S3**, run: `./copy-gridfs-to-s3.pl gridfs-to-s3.yml`
+4. To copy files **from S3 to GridFS**, run: `./copy-s3-to-gridfs.pl gridfs-to-s3.yml`
 
-    1
-    10
-    100
-    2
-    20
-    200
-    ...
+
+## Requirements (Perl module dependencies)
+
+* [Moose](http://search.cpan.org/dist/Moose/)
+* [Log::Log4perl](http://search.cpan.org/dist/Log-Log4perl/)
+* [YAML](http://search.cpan.org/dist/YAML/)
+* [Parallel::Fork::BossWorkerAsync](http://search.cpan.org/dist/Parallel-Fork-BossWorkerAsync/)
+* [Net::Amazon::S3](http://search.cpan.org/dist/Net-Amazon-S3/)
+* [MongoDB](http://search.cpan.org/dist/MongoDB/)
+
+
+## Implementation details
+
+### Sorting in GridFS
+
+When copying **from GridFS** to S3, the script will sort files **roughly by insertion date**. The script uses object's `ObjectId` for sorting. As the default `ObjectId` [contains an insertion timestamp (rounded to seconds)][mongodb-objectid], the objects are sorted in 1 second precision.
+
+For example, if your GridFS deployment contains the following files:
+
+	> db.fs.files.find( { }, { filename: 1, uploadDate: 1 } )
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "1" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "2" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "3" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "4" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "5" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "6" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "7" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:00Z"), "filename" : "8" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "9" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "10" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "11" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "12" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "13" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "14" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "15" }
+	{ "uploadDate" : ISODate("2013-06-11T08:00:01Z"), "filename" : "16" }
+
+...the script will copy files `001`-`008` in any order (because they were inserted during the same second), but will upload files `001`-`008` before uploading files `009-016` (because the latter were inserted in the next second).
+
+
+### Sorting in S3
+
+When copying **from S3** to GridFS, the script will sort files **in lexicographical order**.
+
+For example, if your S3 bucket contains the following files:
+
+	1
+	2
+	3
+	4
+	5
+	6
+	7
+	8
+	9
+	10
+	11
+	12
+	13
+	14
+	15
+	16
+
+...these files will be copied from S3 to GridFS in the following order:
+
+	1
+	10
+	11
+	12
+	13
+	14
+	15
+	16
+	2
+	3
+	4
+	5
+	6
+	7
+	8
+	9
+
+This is because lexicographical order is the only one Amazon supports for sorting S3 contents (at the time of writing).
+
+
+---
+
+[gridfs]: http://docs.mongodb.org/manual/core/gridfs/
+[s3]: http://aws.amazon.com/s3/
+[mongodb-objectid]: http://docs.mongodb.org/manual/reference/object-id/

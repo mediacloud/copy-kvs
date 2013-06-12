@@ -11,14 +11,20 @@
 # prevent multiple instances of the script from doing the same thing.
 lock_file        : "gridfs-to-s3.lock"
 
-# File with the last backed up filename
-file_with_last_backed_up_filename   : "gridfs-to-s3-backup.last"
+# File with the last filename copied from GridFS to S3
+#
+# The script will save the last filename copied from GridFS to S3. That way you
+# can resume the copying later (or when you add more files to GridFS).
+file_with_last_filename_copied_from_gridfs_to_s3   : "copy-gridfs-to-s3.last"
 
-# File with the last restored filename
-file_with_last_restored_filename    : "gridfs-to-s3-restore.last"
+# The script will save the last filename copied from S3 to GridFS. That way you
+# can resume the copying later (or when you add more files to S3).
+file_with_last_filename_copied_from_s3_to_gridfs    : "copy-s3-to-gridfs.last"
 
 # Global timeout for each of the workers
-# (how much to wait for the upload / download to be completed, in seconds)
+#
+# How much to wait for each of the uploads / downloads to be completed, in
+# seconds.
 worker_timeout  : 10
 
 # How many worker threads to spawn
@@ -38,4 +44,6 @@ amazon_s3:
     access_key_id           : "AKIAIOSFODNN7EXAMPLE"
     secret_access_key       : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
     bucket_name             : "backup-gridfs"
-    downloads_folder_name   : "backup"  # May be empty
+    # If set, files in S3 will be saved as "<downloads_folder_name>/<filename>"
+    # instead of just "<filename>"; may be empty
+    downloads_folder_name   : "backup"  

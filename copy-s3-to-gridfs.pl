@@ -28,7 +28,7 @@ sub _log_last_copied_file_from_s3_to_gridfs
     if ($$ == $_main_process_pid)
     {
         if (defined $_last_copied_filename) {
-            open LAST, ">$_config->{file_with_last_restored_filename}";
+            open LAST, ">$_config->{file_with_last_filename_copied_from_s3_to_gridfs}";
             print LAST $_last_copied_filename;
             close LAST;
         }
@@ -66,8 +66,8 @@ sub main
 
     # Read last copied filename
     my $offset_filename;
-    if (-e $_config->{file_with_last_restored_filename}) {
-        open LAST, "<$_config->{file_with_last_restored_filename}";
+    if (-e $_config->{file_with_last_filename_copied_from_s3_to_gridfs}) {
+        open LAST, "<$_config->{file_with_last_filename_copied_from_s3_to_gridfs}";
         $offset_filename = <LAST>;
         chomp $offset_filename;
         close LAST;

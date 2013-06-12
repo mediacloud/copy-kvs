@@ -54,12 +54,7 @@ sub main
 	$_config = LoadFile($ARGV[0]) or LOGDIE("Unable to read configuration from '$ARGV[0]': $!");
 
     # Create lock file
-    if (-e $_config->{lock_file}) {
-        LOGDIE("Lock file '$_config->{lock_file}' already exists.");
-    }
-    open LOCK, ">$_config->{lock_file}";
-    print LOCK "$$";
-    close LOCK;
+    _create_lock_file($_config);
 
     # Catch SIGINTs to clean up the lock file and cleanly write the last copied file
     $SIG{ 'INT' } = '_sigint';
@@ -129,7 +124,7 @@ sub main
     $bw->shut_down();
 
     # Remove lock file
-    unlink $_config->{lock_file};
+    _unlink_lock_file($_config);
 }
 
 sub upload_file_to_s3

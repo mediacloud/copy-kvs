@@ -63,4 +63,23 @@ sub _s3_handler_for_pid($$)
     return $_s3_handlers{$pid};
 }
 
+sub _create_lock_file($)
+{
+    my $config = shift;
+
+    if (-e $config->{lock_file}) {
+        LOGDIE("Lock file '$config->{lock_file}' already exists.");
+    }
+    open LOCK, ">$config->{lock_file}";
+    print LOCK "$$";
+    close LOCK;
+}
+
+sub _unlink_lock_file($)
+{
+    my $config = shift;
+
+    unlink $config->{lock_file};
+}
+
 1;

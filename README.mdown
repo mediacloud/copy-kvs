@@ -95,6 +95,15 @@ For example, if your S3 bucket contains the following files:
 This is because lexicographical order is the only one Amazon supports for sorting S3 contents (at the time of writing).
 
 
+### Unit tests
+
+Execute:
+
+	GRIDFS_TO_S3_CONFIG=gridfs-to-s3.yml prove
+
+to run unit tests provided with the script.
+
+
 ---
 
 [gridfs]: http://docs.mongodb.org/manual/core/gridfs/

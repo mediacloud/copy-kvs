@@ -147,6 +147,8 @@ sub delete($$)
         # "safe -- If true, each remove will be checked for success and die on failure."
         $_mongodb_gridfs->remove( { 'filename' => $filename }, { safe => 1 } );
     }
+
+    return 1;
 }
 
 sub put($$$)

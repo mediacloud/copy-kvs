@@ -10,7 +10,6 @@ use Test::Deep;
 BEGIN { use_ok('Storage::Handler::AmazonS3'); }
 BEGIN { use_ok('Net::Amazon::S3'); }
 
-# Temporary bucket for unit tests
 # Connection configuration
 my $config = configuration_from_env();
 

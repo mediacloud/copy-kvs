@@ -103,6 +103,11 @@ Execute:
 
 to run unit tests provided with the script.
 
+The test `t/copy_gridfs_to_s3_to_gridfs.t` will create and afterwards remove:
+
+* two temporary Mongo GridFS databases with the names such as `gridfs-to-s3_testing_source_33jdgSNyNWLykIXi` and `gridfs-to-s3_testing_destination_uBnqHweeexioHcXn`
+* one temporary Amazon S3 bucket with the name such as `gridfs-to-s3.testing.PGW22CuIuGbMQKMpTFqZsgqa5Th66yXB`.
+* a lock file, "last filename copied to S3" file and "last filename copied to GridFS" file, all appended with a randomly generated string.
 
 ---
 

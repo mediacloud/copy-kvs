@@ -29,18 +29,18 @@ use constant MONGODB_WRITE_RETRIES => 3;
 
 
 # Configuration
-my $_config_host;
-my $_config_port;
-my $_config_database;
+has '_config_host' => ( is => 'rw' );
+has '_config_port' => ( is => 'rw' );
+has '_config_database' => ( is => 'rw' );
 
 # MongoDB client, GridFS instance (lazy-initialized to prevent multiple forks using the same object)
-my $_mongodb_client   = undef;
-my $_mongodb_database = undef;
-my $_mongodb_gridfs   = undef;
-my $_mongodb_fs_files_collection = undef;
+has '_mongodb_client' => ( is => 'rw' );
+has '_mongodb_database' => ( is => 'rw' );
+has '_mongodb_gridfs' => ( is => 'rw' );
+has '_mongodb_fs_files_collection' => ( is => 'rw' );
 
 # Process PID (to prevent forks attempting to clone the MongoDB accessor objects)
-my $_pid = 0;
+has '_pid' => ( is => 'rw' );
 
 
 # Constructor
@@ -48,21 +48,10 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $_config_host = $args->{host} || 'localhost';
-    $_config_port = $args->{port} || 27017;
-    $_config_database = $args->{database} or LOGDIE("Database is not defined.");
-}
-
-# Destructor
-sub DEMOLISH
-{
-
-    # Setting instances to undef should take care of the disconnect / cleanup automatically
-    $_mongodb_fs_files_collection = undef;
-    $_mongodb_gridfs   = undef;
-    $_mongodb_database = undef;
-    $_mongodb_client   = undef;
-    $_pid              = 0;
+    $self->_config_host($args->{host} || 'localhost');
+    $self->_config_port($args->{port} || 27017);
+    $self->_config_database($args->{database}) or LOGDIE("Database is not defined.");
+    $self->_pid($$);
 }
 
 # Validate ObjectId
@@ -78,11 +67,11 @@ sub valid_objectid($)
     }
 }
 
-sub _connect_to_mongodb_or_die
+sub _connect_to_mongodb_or_die($)
 {
     my ( $self ) = @_;
 
-    if ( $_pid == $$ and ( $_mongodb_client and $_mongodb_database and $_mongodb_gridfs and $_mongodb_fs_files_collection ) )
+    if ( $self->_pid == $$ and ( $self->_mongodb_client and $self->_mongodb_database and $self->_mongodb_gridfs and $self->_mongodb_fs_files_collection ) )
     {
 
         # Already connected on the very same process
@@ -90,42 +79,42 @@ sub _connect_to_mongodb_or_die
     }
 
     # Connect
-    $_mongodb_client = MongoDB::MongoClient->new( host => $_config_host, port => $_config_port, query_timeout => MONGODB_QUERY_TIMEOUT );
-    unless ( $_mongodb_client )
+    $self->_mongodb_client(MongoDB::MongoClient->new( host => $self->_config_host, port => $self->_config_port, query_timeout => MONGODB_QUERY_TIMEOUT ));
+    unless ( $self->_mongodb_client )
     {
-        LOGDIE("Unable to connect to MongoDB ($_config_host:$_config_port).");
+        LOGDIE("Unable to connect to MongoDB (" . $self->_config_host . ":" . $self->_config_port . ").");
     }
 
-    $_mongodb_database = $_mongodb_client->get_database( $_config_database );
-    unless ( $_mongodb_database )
+    $self->_mongodb_database($self->_mongodb_client->get_database( $self->_config_database ));
+    unless ( $self->_mongodb_database )
     {
-        LOGDIE("Unable to choose a MongoDB database '$_config_database'.");
+        LOGDIE("Unable to choose a MongoDB database '" . $self->_config_database . "'.");
     }
 
-    $_mongodb_fs_files_collection = $_mongodb_database->get_collection('fs.files');
-    unless ($_mongodb_fs_files_collection) {
-        LOGDIE("Unable to use MongoDB database's '$_config_database' collection 'fs.files'.");
+    $self->_mongodb_fs_files_collection($self->_mongodb_database->get_collection('fs.files'));
+    unless ($self->_mongodb_fs_files_collection) {
+        LOGDIE("Unable to use MongoDB database's '" . $self->_config_database . "' collection 'fs.files'.");
     }
 
-    $_mongodb_gridfs = $_mongodb_database->get_gridfs;
-    unless ( $_mongodb_gridfs )
+    $self->_mongodb_gridfs($self->_mongodb_database->get_gridfs);
+    unless ( $self->_mongodb_gridfs )
     {
-        LOGDIE("Unable to use MongoDB database '$_config_database' as GridFS database.");
+        LOGDIE("Unable to use MongoDB database '" . $self->_config_database . "' as GridFS database.");
     }
 
     # Save PID
-    $_pid = $$;
+    $self->_pid($$);
 
-    INFO("Connected to GridFS download storage ($_config_host:$_config_port/$_config_database).");
+    INFO("Connected to GridFS download storage (" . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ").");
 }
 
 sub head($$)
 {
     my ( $self, $filename ) = @_;
 
-    _connect_to_mongodb_or_die();
+    $self->_connect_to_mongodb_or_die();
 
-    my $file = $_mongodb_gridfs->find_one( { 'filename' => $filename } );
+    my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
 
     if ( defined $file )
     {
@@ -139,13 +128,13 @@ sub delete($$)
 {
     my ( $self, $filename ) = @_;
 
-    _connect_to_mongodb_or_die();
+    $self->_connect_to_mongodb_or_die();
 
     # Remove file(s) if already exist(s) -- MongoDB might store several versions of the same file
-    while ( my $file = $_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
+    while ( my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
     {
         # "safe -- If true, each remove will be checked for success and die on failure."
-        $_mongodb_gridfs->remove( { 'filename' => $filename }, { safe => 1 } );
+        $self->_mongodb_gridfs->remove( { 'filename' => $filename }, { safe => 1 } );
     }
 
     return 1;
@@ -155,7 +144,7 @@ sub put($$$)
 {
     my ( $self, $filename, $contents ) = @_;
 
-    _connect_to_mongodb_or_die();
+    $self->_connect_to_mongodb_or_die();
 
     my $gridfs_id;
 
@@ -171,7 +160,7 @@ sub put($$$)
         eval {
 
             # Remove file(s) if already exist(s) -- MongoDB might store several versions of the same file
-            while ( my $file = $_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
+            while ( my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
             {
                 INFO("Removing existing file '$filename'....");
                 $self->delete( $filename );
@@ -180,7 +169,7 @@ sub put($$$)
             # Write
             my $basic_fh;
             open( $basic_fh, '<', \$contents );
-            $gridfs_id = $_mongodb_gridfs->put( $basic_fh, { 'filename' => $filename } );
+            $gridfs_id = $self->_mongodb_gridfs->put( $basic_fh, { 'filename' => $filename } );
             unless ( $gridfs_id )
             {
                 LOGDIE("MongoDB's ObjectId is empty.");
@@ -209,7 +198,7 @@ sub get($$)
 {
     my ( $self, $filename ) = @_;
 
-    _connect_to_mongodb_or_die();
+    $self->_connect_to_mongodb_or_die();
 
     my $id = MongoDB::OID->new( filename => $filename );
 
@@ -227,7 +216,7 @@ sub get($$)
         eval {
 
             # Read
-            $file = $_mongodb_gridfs->find_one( { 'filename' => $filename } );
+            $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
             $attempt_to_read_succeeded = 1;
         };
 
@@ -260,14 +249,14 @@ sub list_iterator($;$)
 {
     my ( $self, $filename_offset ) = @_;
 
-    _connect_to_mongodb_or_die();
+    $self->_connect_to_mongodb_or_die();
 
     my $filenames = [];
 
     my $offset_objectid;
     if ($filename_offset) {
         # Find the ObjectId of the offset filename
-        $offset_objectid       = $_mongodb_fs_files_collection->find_one({ filename => $filename_offset }, {_id => 1});
+        $offset_objectid       = $self->_mongodb_fs_files_collection->find_one({ filename => $filename_offset }, {_id => 1});
         unless ($offset_objectid) {
             LOGDIE("Offset file '$filename_offset' was not found.");
         }
@@ -283,7 +272,7 @@ sub list_iterator($;$)
     }
 
     # Sort by ObjectId because it is indexed and contains an insertion timestamp
-    my $cursor = $_mongodb_fs_files_collection->query($find_query)->sort({_id => 1})->fields({_id=>1, filename=>1});
+    my $cursor = $self->_mongodb_fs_files_collection->query($find_query)->sort({_id => 1})->fields({_id=>1, filename=>1});
     my $iterator = Storage::Iterator::GridFS->new(cursor => $cursor);
     return $iterator;
 }

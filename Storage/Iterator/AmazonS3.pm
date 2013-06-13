@@ -11,21 +11,21 @@ with 'Storage::Iterator';
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
-my $_bucket = undef;
-my $_prefix = undef;
-my $_offset = undef;
-my $_end_of_data = 0;
+has '_bucket' => ( is => 'rw' );
+has '_prefix' => ( is => 'rw' );
+has '_offset' => ( is => 'rw' );
+has '_end_of_data' => ( is => 'rw' );
 
-my @_filenames;
+has '_filenames' => ( is => 'rw', default => sub { [] } );
 
 # Constructor
 sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $_bucket = $args->{bucket} or LOGDIE("Bucket is undefined.");
-    $_prefix = $args->{prefix} || '';   # No prefix (folder)
-    $_offset = $args->{offset} || '';   # No offset (list from beginning)
+    $self->_bucket($args->{bucket}) or LOGDIE("Bucket is undefined.");
+    $self->_prefix($args->{prefix} || '');   # No prefix (folder)
+    $self->_offset($args->{offset} || '');   # No offset (list from beginning)
 }
 
 sub _strip_prefix($$)
@@ -36,30 +36,32 @@ sub _strip_prefix($$)
     return $string;
 }
 
-sub next()
+sub next($)
 {
-    if (scalar (@_filenames) == 0)
+    my ($self) = @_;
+
+    if (scalar (@{$self->_filenames}) == 0)
     {
-        if ($_end_of_data) {
+        if ($self->_end_of_data) {
             # Last fetched chunk was the end of the list
             return undef;
         }
 
         # Fetch a new chunk
-        my $list = $_bucket->list({prefix => $_prefix,
-                                  marker => $_prefix . $_offset}) or LOGDIE("Unable to fetch the next list of files.");
-        $_offset = _strip_prefix($list->{next_marker}, $_prefix);
+        my $list = $self->_bucket->list({prefix => $self->_prefix,
+                                  marker => $self->_prefix . $self->_offset}) or LOGDIE("Unable to fetch the next list of files.");
+        $self->_offset(_strip_prefix($list->{next_marker}, $self->_prefix));
         unless ($list->{is_truncated}) {
-            $_end_of_data = 1;
+            $self->_end_of_data(1);
         }
 
         for my $filename (@{$list->{keys}}) {
-            $filename = _strip_prefix($filename->{key}, $_prefix) or LOGDIE("Empty filename.");
-            push (@_filenames, $filename);
+            $filename = _strip_prefix($filename->{key}, $self->_prefix) or LOGDIE("Empty filename.");
+            push (@{$self->_filenames}, $filename);
         }
     }
 
-    return shift (@_filenames);
+    return shift (@{$self->_filenames});
 }
 
 no Moose;    # gets rid of scaffolding

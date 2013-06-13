@@ -14,7 +14,7 @@ Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]:
 # for valid_objectid()
 use Storage::Handler::GridFS;
 
-my $_cursor = undef;
+has '_cursor' => ( is => 'rw' );
 
 
 # Constructor
@@ -22,8 +22,8 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $_cursor = $args->{cursor};
-    unless ($_cursor) {
+    $self->_cursor($args->{cursor});
+    unless ($self->_cursor) {
         LOGDIE("MongoDB result cursor is undefined.");
     }
 }
@@ -32,7 +32,7 @@ sub next($)
 {
     my ($self) = @_;
 
-    my $object = $_cursor->next;
+    my $object = $self->_cursor->next;
     unless ($object) {
         # No more files
         return undef;

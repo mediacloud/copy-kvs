@@ -20,7 +20,7 @@ use Storage::Iterator::AmazonS3;
 use constant AMAZON_S3_USE_SSL => 0;
 
 # How many seconds should the module wait before bailing on a request to S3 (in seconds)
-use constant AMAZON_S3_TIMEOUT => 10;
+use constant AMAZON_S3_TIMEOUT => 60;
 
 # Check if content exists before PUTting (good for debugging, slows down the stores)
 use constant AMAZON_S3_CHECK_IF_EXISTS_BEFORE_PUTTING => 1;

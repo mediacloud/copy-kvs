@@ -26,6 +26,7 @@ sub BUILD {
     unless ($self->_cursor) {
         LOGDIE("MongoDB result cursor is undefined.");
     }
+	$self->_cursor->immortal(1);
 }
 
 sub next($)

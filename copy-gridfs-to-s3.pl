@@ -3,6 +3,9 @@
 use strict;
 use warnings;
 
+use FindBin;
+use lib "$FindBin::Bin";
+
 use GridFSToS3;
 
 use YAML qw(LoadFile);

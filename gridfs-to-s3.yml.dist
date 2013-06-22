@@ -46,4 +46,4 @@ amazon_s3:
     bucket_name             : "backup-gridfs"
     # If set, files in S3 will be saved as "<downloads_folder_name>/<filename>"
     # instead of just "<filename>"; may be empty
-    downloads_folder_name   : "backup"  
+    folder_name   : "backup"  

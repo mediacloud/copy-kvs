@@ -25,7 +25,7 @@ file_with_last_filename_copied_from_s3_to_gridfs    : "copy-s3-to-gridfs.last"
 #
 # How much to wait for each of the uploads / downloads to be completed, in
 # seconds.
-worker_timeout  : 10
+worker_timeout  : 60
 
 # How many worker threads to spawn
 worker_threads  : 32

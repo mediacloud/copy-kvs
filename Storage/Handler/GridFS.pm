@@ -1,6 +1,6 @@
 package Storage::Handler::GridFS;
 
-# class for storing / loading downloads in GridFS (MongoDB)
+# class for storing / loading files in GridFS (MongoDB)
 
 use strict;
 use warnings;
@@ -16,22 +16,18 @@ Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]:
 
 use Storage::Iterator::GridFS;
 
-# MongoDB's query timeout, in ms
-# (default timeout is 30 s, but MongoDB sometimes creates a new 2 GB data file for ~38 seconds,
-#  so we set it to 60 s)
-use constant MONGODB_QUERY_TIMEOUT => 60 * 1000;
-
-# MongoDB's number of read / write retries
+# MongoDB's number of read / write attempts
 # (in case waiting 60 seconds for the read / write to happen doesn't help, the instance should
 #  retry writing a couple of times)
-use constant MONGODB_READ_RETRIES  => 3;
-use constant MONGODB_WRITE_RETRIES => 3;
+use constant MONGODB_READ_ATTEMPTS  => 3;
+use constant MONGODB_WRITE_ATTEMPTS => 3;
 
 
 # Configuration
 has '_config_host' => ( is => 'rw' );
 has '_config_port' => ( is => 'rw' );
 has '_config_database' => ( is => 'rw' );
+has '_config_timeout' => ( is => 'rw' );
 
 # MongoDB client, GridFS instance (lazy-initialized to prevent multiple forks using the same object)
 has '_mongodb_client' => ( is => 'rw' );
@@ -48,9 +44,17 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
+    if (MONGODB_READ_ATTEMPTS < 1) {
+        LOGDIE("MONGODB_READ_ATTEMPTS must be >= 1");
+    }
+    if (MONGODB_WRITE_ATTEMPTS < 1) {
+        LOGDIE("MONGODB_WRITE_ATTEMPTS must be >= 1");
+    }
+
     $self->_config_host($args->{host} || 'localhost');
     $self->_config_port($args->{port} || 27017);
     $self->_config_database($args->{database}) or LOGDIE("Database is not defined.");
+    $self->_config_timeout($args->{timeout} || 60);
     $self->_pid($$);
 }
 
@@ -79,7 +83,11 @@ sub _connect_to_mongodb_or_die($)
     }
 
     # Connect
-    $self->_mongodb_client(MongoDB::MongoClient->new( host => $self->_config_host, port => $self->_config_port, query_timeout => MONGODB_QUERY_TIMEOUT ));
+    $self->_mongodb_client(MongoDB::MongoClient->new(
+        host => $self->_config_host,
+        port => $self->_config_port,
+        query_timeout => ($self->_config_timeout * 1000)
+    ));
     unless ( $self->_mongodb_client )
     {
         LOGDIE("Unable to connect to MongoDB (" . $self->_config_host . ":" . $self->_config_port . ").");
@@ -105,7 +113,7 @@ sub _connect_to_mongodb_or_die($)
     # Save PID
     $self->_pid($$);
 
-    INFO("Connected to GridFS download storage (" . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ").");
+    INFO("Connected to GridFS storage (" . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ").");
 }
 
 sub head($$)
@@ -150,11 +158,11 @@ sub put($$$)
 
     # MongoDB sometimes times out when writing because it's busy creating a new data file,
     # so we'll try to write several times
-    for ( my $retry = 0 ; $retry < MONGODB_WRITE_RETRIES ; ++$retry )
+    for ( my $retry = 0 ; $retry < MONGODB_WRITE_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
-            WARN("Retrying...");
+            WARN("Retrying ($retry)...");
         }
 
         eval {
@@ -188,7 +196,7 @@ sub put($$$)
 
     unless ( $gridfs_id )
     {
-        LOGDIE("Unable to store download '$filename' to GridFS after " . MONGODB_WRITE_RETRIES . " retries.");
+        LOGDIE("Unable to write '$filename' to GridFS after " . MONGODB_WRITE_ATTEMPTS . " retries.");
     }
 
     return 1;
@@ -206,11 +214,11 @@ sub get($$)
     # so we'll try to read several times
     my $attempt_to_read_succeeded = 0;
     my $file                      = undef;
-    for ( my $retry = 0 ; $retry < MONGODB_READ_RETRIES ; ++$retry )
+    for ( my $retry = 0 ; $retry < MONGODB_READ_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
-            WARN("Retrying...");
+            WARN("Retrying ($retry)...");
         }
 
         eval {
@@ -232,7 +240,7 @@ sub get($$)
 
     unless ( $attempt_to_read_succeeded )
     {
-        LOGDIE("Unable to read download '$filename' from GridFS after " . MONGODB_READ_RETRIES . " retries.");
+        LOGDIE("Unable to read '$filename' from GridFS after " . MONGODB_READ_ATTEMPTS . " retries.");
     }
 
     unless ( defined( $file ) )

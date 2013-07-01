@@ -45,7 +45,8 @@ sub _gridfs_handler_for_pid($$)
         $_gridfs_handlers{$pid} = Storage::Handler::GridFS->new(
             host => $config->{mongodb_gridfs}->{host} || 'localhost',
             port => $config->{mongodb_gridfs}->{port} || 27017,
-            database => $config->{mongodb_gridfs}->{database}
+            database => $config->{mongodb_gridfs}->{database},
+            timeout => $_config->{worker_timeout} || 60
         );
         unless ($_gridfs_handlers{$pid}) {
             LOGDIE("Unable to initialize GridFS handler for PID $pid");
@@ -68,7 +69,8 @@ sub _s3_handler_for_pid($$)
             access_key_id => $config->{amazon_s3}->{access_key_id},
             secret_access_key => $config->{amazon_s3}->{secret_access_key},
             bucket_name => $config->{amazon_s3}->{bucket_name},
-            folder_name => $config->{amazon_s3}->{folder_name} || ''
+            folder_name => $config->{amazon_s3}->{folder_name} || '',
+            timeout => $_config->{worker_timeout} || 60
         );
         unless ($_s3_handlers{$pid}) {
             LOGDIE("Unable to initialize S3 handler for PID $pid");

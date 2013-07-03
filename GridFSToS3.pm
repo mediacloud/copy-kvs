@@ -148,12 +148,21 @@ sub _upload_file_to_s3
     my $filename = $job->{filename};
     my $config = $job->{config};
 
-    # Get storage handlers for current thread (PID)
-    my $gridfs = _gridfs_handler_for_pid($$, $config);
-    my $amazons3 = _s3_handler_for_pid($$, $config);
+    eval {
 
-    INFO("Copying '$filename'...");
-    $amazons3->put($filename, $gridfs->get($filename));
+        # Get storage handlers for current thread (PID)
+        my $gridfs = _gridfs_handler_for_pid($$, $config);
+        my $amazons3 = _s3_handler_for_pid($$, $config);
+
+        INFO("Copying '$filename'...");
+        $amazons3->put($filename, $gridfs->get($filename));
+
+    };
+
+    if ( $@ )
+    {
+        LOGDIE("Job error occurred while copying '$filename': $@");
+    }
 
     return { filename => $filename };
 }
@@ -165,12 +174,21 @@ sub _download_file_to_gridfs
     my $filename = $job->{filename};
     my $config = $job->{config};
 
-    # Get storage handlers for current thread (PID)
-    my $amazons3 = _s3_handler_for_pid($$, $config);
-    my $gridfs = _gridfs_handler_for_pid($$, $config);
+    eval {
 
-    INFO("Copying '$filename'...");
-    $gridfs->put($filename, $amazons3->get($filename));
+        # Get storage handlers for current thread (PID)
+        my $amazons3 = _s3_handler_for_pid($$, $config);
+        my $gridfs = _gridfs_handler_for_pid($$, $config);
+
+        INFO("Copying '$filename'...");
+        $gridfs->put($filename, $amazons3->get($filename));
+
+    };
+
+    if ( $@ )
+    {
+        LOGDIE("Job error occurred while copying '$filename': $@");
+    }    
 
     return { filename => $filename };
 }

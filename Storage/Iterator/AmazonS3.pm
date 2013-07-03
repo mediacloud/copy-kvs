@@ -14,8 +14,9 @@ Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]:
 has '_bucket' => ( is => 'rw' );
 has '_prefix' => ( is => 'rw' );
 has '_offset' => ( is => 'rw' );
-has '_end_of_data' => ( is => 'rw' );
+has '_read_attempts' => ( is => 'rw' );
 
+has '_end_of_data' => ( is => 'rw' );
 has '_filenames' => ( is => 'rw', default => sub { [] } );
 
 # Constructor
@@ -26,6 +27,7 @@ sub BUILD {
     $self->_bucket($args->{bucket}) or LOGDIE("Bucket is undefined.");
     $self->_prefix($args->{prefix} || '');   # No prefix (folder)
     $self->_offset($args->{offset} || '');   # No offset (list from beginning)
+    $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
 }
 
 sub _strip_prefix($$)
@@ -47,9 +49,43 @@ sub next($)
             return undef;
         }
 
-        # Fetch a new chunk
-        my $list = $self->_bucket->list({prefix => $self->_prefix,
-                                  marker => $self->_prefix . $self->_offset}) or LOGDIE("Unable to fetch the next list of files.");
+        # S3 sometimes times out when reading so we'll try to read several times
+        my $attempt_to_read_succeeded = 0;
+        my $list;
+        for ( my $retry = 0 ; $retry < $self->_read_attempts ; ++$retry )
+        {
+            if ( $retry > 0 )
+            {
+                WARN("Retrying ($retry)...");
+            }
+
+            eval {
+
+                # Fetch a new chunk
+                $list = $self->_bucket->list({
+                    prefix => $self->_prefix,
+                    marker => $self->_prefix . $self->_offset
+                }) or LOGDIE("Unable to fetch the next list of files.");
+
+                $attempt_to_read_succeeded = 1;
+            };
+
+            if ( $@ )
+            {
+                WARN("Attempt to read next the filename didn't succeed because: $@");
+            }
+            else
+            {
+                last;
+            }
+        }
+
+        unless ( $attempt_to_read_succeeded )
+        {
+            LOGDIE("Unable to read the next filename from S3 after " . $self->_read_attempts . " retries.");
+        }
+
+        # Write down the new offset
         $self->_offset(_strip_prefix($list->{next_marker}, $self->_prefix));
         unless ($list->{is_truncated}) {
             $self->_end_of_data(1);

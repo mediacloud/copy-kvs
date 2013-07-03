@@ -290,7 +290,8 @@ sub list_iterator($;$)
 
     my $iterator = Storage::Iterator::AmazonS3->new(bucket => $self->_s3_bucket,
                                                     prefix => $self->_config_folder_name,
-                                                    offset => $filename_offset);
+                                                    offset => $filename_offset,
+                                                    read_attempts => AMAZON_S3_READ_ATTEMPTS);
     return $iterator;
 }
 

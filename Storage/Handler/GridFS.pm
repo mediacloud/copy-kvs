@@ -14,6 +14,8 @@ use MongoDB::GridFS;
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
+use POSIX qw(floor);
+
 use Storage::Iterator::GridFS;
 
 # MongoDB's number of read / write attempts
@@ -82,11 +84,18 @@ sub _connect_to_mongodb_or_die($)
         return;
     }
 
+    # Timeout should "fit in" at least MONGODB_READ_ATTEMPTS number of retries
+    # within the time period
+    my $query_timeout = floor(($self->_config_timeout / MONGODB_READ_ATTEMPTS) - 1);
+    if ($query_timeout < 10) {
+        LOGDIE("MongoDB query timeout ($query_timeout s) is too small.");
+    }
+
     # Connect
     $self->_mongodb_client(MongoDB::MongoClient->new(
         host => $self->_config_host,
         port => $self->_config_port,
-        query_timeout => ($self->_config_timeout * 1000)
+        query_timeout => ($query_timeout * 1000)
     ));
     unless ( $self->_mongodb_client )
     {
@@ -113,7 +122,7 @@ sub _connect_to_mongodb_or_die($)
     # Save PID
     $self->_pid($$);
 
-    INFO("Connected to GridFS storage (" . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ").");
+    INFO("Initialized GridFS storage at " . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ") with query timeout = $query_timeout s, read attempts = " . MONGODB_READ_ATTEMPTS . ", write attempts = " . MONGODB_WRITE_ATTEMPTS);
 }
 
 sub head($$)
@@ -281,7 +290,7 @@ sub list_iterator($;$)
 
     # Sort by ObjectId because it is indexed and contains an insertion timestamp
     my $cursor = $self->_mongodb_fs_files_collection->query($find_query)->sort({_id => 1})->fields({_id=>1, filename=>1});
-    my $iterator = Storage::Iterator::GridFS->new(cursor => $cursor);
+    my $iterator = Storage::Iterator::GridFS->new(cursor => $cursor, read_attempts => MONGODB_READ_ATTEMPTS);
     return $iterator;
 }
 

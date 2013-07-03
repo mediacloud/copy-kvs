@@ -15,6 +15,7 @@ Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]:
 use Storage::Handler::GridFS;
 
 has '_cursor' => ( is => 'rw' );
+has '_read_attempts' => ( is => 'rw' );
 
 
 # Constructor
@@ -27,13 +28,47 @@ sub BUILD {
         LOGDIE("MongoDB result cursor is undefined.");
     }
 	$self->_cursor->immortal(1);
+
+    $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
 }
 
 sub next($)
 {
     my ($self) = @_;
 
-    my $object = $self->_cursor->next;
+    # MongoDB sometimes times out when reading because it's busy creating a new data file,
+    # so we'll try to read several times
+    my $attempt_to_read_succeeded = 0;
+    my $object;
+    for ( my $retry = 0 ; $retry < $self->_read_attempts ; ++$retry )
+    {
+        if ( $retry > 0 )
+        {
+            WARN("Retrying ($retry)...");
+        }
+
+        eval {
+
+            # Read next
+            $object = $self->_cursor->next;
+            $attempt_to_read_succeeded = 1;
+        };
+
+        if ( $@ )
+        {
+            WARN("Attempt to read next the filename didn't succeed because: $@");
+        }
+        else
+        {
+            last;
+        }
+    }
+
+    unless ( $attempt_to_read_succeeded )
+    {
+        LOGDIE("Unable to read the next filename from GridFS after " . $self->_read_attempts . " retries.");
+    }
+
     unless ($object) {
         # No more files
         return undef;

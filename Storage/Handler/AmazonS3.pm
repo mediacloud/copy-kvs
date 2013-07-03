@@ -94,7 +94,7 @@ sub _initialize_s3_or_die($)
     # within the time period
     my $request_timeout = floor(($self->_config_timeout / AMAZON_S3_READ_ATTEMPTS) - 1);
     if ($request_timeout < 10) {
-        LOGDIE("Amazon S3 request timeout ($request_timeout) too small.");
+        LOGDIE("Amazon S3 request timeout ($request_timeout s) is too small.");
     }
 
     # Initialize
@@ -128,7 +128,7 @@ sub _initialize_s3_or_die($)
     $self->_pid($$);
 
     my $path = ( $self->_config_folder_name ? $self->_config_bucket_name . '/' . $self->_config_folder_name : $self->_config_bucket_name );
-    INFO("Initialized Amazon S3 storage at '$path' with timeout of $request_timeout.");
+    INFO("Initialized Amazon S3 storage at '$path' with request timeout = $request_timeout s, read attempts = " . AMAZON_S3_READ_ATTEMPTS . ", write attempts = " . AMAZON_S3_WRITE_ATTEMPTS);
 }
 
 sub _path_for_filename($$)

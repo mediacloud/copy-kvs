@@ -233,7 +233,12 @@ sub get($$)
         eval {
 
             # Read
-            $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
+            my $gridfs_file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
+            unless ( defined $gridfs_file )
+            {
+                die "GridFS: unable to find file with filename '$filename'.";
+            }
+            $file                      = $gridfs_file->slurp;
             $file = $file->slurp;
             $attempt_to_read_succeeded = 1;
         };

@@ -239,7 +239,6 @@ sub get($$)
                 die "GridFS: unable to find file with filename '$filename'.";
             }
             $file                      = $gridfs_file->slurp;
-            $file = $file->slurp;
             $attempt_to_read_succeeded = 1;
         };
 

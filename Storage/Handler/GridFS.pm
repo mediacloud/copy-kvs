@@ -234,6 +234,7 @@ sub get($$)
 
             # Read
             $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
+            $file = $file->slurp;
             $attempt_to_read_succeeded = 1;
         };
 
@@ -257,9 +258,7 @@ sub get($$)
         LOGDIE("Could not get file from GridFS for filename '$filename'");
     }
 
-    my $content = $file->slurp;
-
-    return $content;
+    return $file;
 }
 
 sub list_iterator($;$)

@@ -45,3 +45,16 @@ amazon_s3:
     folder_name             : "backup"
     # will try 3 times within 19 seconds:
     timeout                 : 60
+    # Use SSL (1/0)?
+    use_ssl                 : 0
+    # Whether to check if the file exists (by sending a HEAD request) before doing
+    # anything else.
+    # Setting to "yes" will increase both the script verbosity and Amazon S3 costs
+    # (because HEAD requests cost too!)
+    head_before:
+        # HEAD before PUTting a file (1/0)
+        put                 : 0
+        # HEAD before GETting a file (1/0)
+        get                 : 0
+        # HEAD before DELETing a file (1/0)
+        delete              : 0

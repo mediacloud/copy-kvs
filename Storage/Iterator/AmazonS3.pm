@@ -11,7 +11,12 @@ with 'Storage::Iterator';
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
-has '_bucket' => ( is => 'rw' );
+# Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket)
+# doesn't seem to support manual markers
+use Net::Amazon::S3 0.59;
+
+has '_s3' => ( is => 'rw' );
+has '_bucket_name' => ( is => 'rw' );
 has '_prefix' => ( is => 'rw' );
 has '_offset' => ( is => 'rw' );
 has '_read_attempts' => ( is => 'rw' );
@@ -24,7 +29,8 @@ sub BUILD {
     my $self = shift;
     my $args = shift;
 
-    $self->_bucket($args->{bucket}) or LOGDIE("Bucket is undefined.");
+    $self->_s3($args->{s3}) or LOGDIE("Net::Amazon::S3 object is undefined.");
+    $self->_bucket_name($args->{bucket_name}) or LOGDIE("Bucket name is undefined.");
     $self->_prefix($args->{prefix} || '');   # No prefix (folder)
     $self->_offset($args->{offset} || '');   # No offset (list from beginning)
     $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
@@ -62,7 +68,9 @@ sub next($)
             eval {
 
                 # Fetch a new chunk
-                $list = $self->_bucket->list({
+                DEBUG("Will fetch a new chunk of filenames with offset: " . $self->_offset);
+                $list = $self->_s3->list_bucket({
+                    bucket => $self->_bucket_name,
                     prefix => $self->_prefix,
                     marker => $self->_prefix . $self->_offset
                 }) or LOGDIE("Unable to fetch the next list of files.");
@@ -93,7 +101,12 @@ sub next($)
 
         # Write down the new offset
         $self->_offset(_strip_prefix($list->{next_marker}, $self->_prefix));
-        unless ($list->{is_truncated}) {
+        if ($list->{is_truncated}) {
+            # More files left to fetch -- use the last filename as a marker
+            $self->_offset($self->_filenames->[-1]);
+            DEBUG("Updated to offset: " . $self->_offset);
+        } else {
+            # No more files (as the list is not truncated)
             $self->_end_of_data(1);
         }
     }

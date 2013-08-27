@@ -11,8 +11,9 @@ with 'Storage::Handler';
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
-# Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket) doesn't seem to support manual markers
-use Net::Amazon::S3;
+# Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket)
+# doesn't seem to support manual markers
+use Net::Amazon::S3 0.59;
 
 use POSIX qw(floor);
 
@@ -122,6 +123,8 @@ sub _initialize_s3_or_die($)
     unless ( $self->_s3_bucket )
     {
         LOGDIE("Unable to get bucket '" . $self->_config_bucket_name . "'.");
+    } else {
+        DEBUG("Bucket was found: " . $self->_s3_bucket);
     }
 
     # Save PID
@@ -288,7 +291,8 @@ sub list_iterator($;$)
 
     $self->_initialize_s3_or_die();
 
-    my $iterator = Storage::Iterator::AmazonS3->new(bucket => $self->_s3_bucket,
+    my $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
+                                                    bucket_name => $self->_config_bucket_name,
                                                     prefix => $self->_config_folder_name,
                                                     offset => $filename_offset,
                                                     read_attempts => AMAZON_S3_READ_ATTEMPTS);

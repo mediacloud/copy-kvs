@@ -85,7 +85,8 @@ sub next($)
                 my $cursor = $self->_fs_files_collection
                                   ->query( $find_query )
                                   ->sort({ _id => 1})
-                                  ->fields({ _id => 1, filename => 1 });
+                                  ->fields({ _id => 1, filename => 1 })
+                                  ->limit(GRIDFS_CHUNK_SIZE);
                 $cursor->immortal();
                 @objects = $cursor->all;
 

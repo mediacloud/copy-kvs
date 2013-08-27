@@ -181,6 +181,13 @@ After copying a bunch of files from GridFS (MongoDB v2.2.3) to S3, one of the wo
 Removing the lock file and restarting the copy script works fine in this case.
 
 
+### `MongoDB::Cursor` crashes with `recv timed out`, then skips a bunch of files
+
+See [#PERL-265 MongoDB::Cursor silently skips over thousands of objects after failing with "recv timed out"](https://jira.mongodb.org/browse/PERL-265).
+
+That's why we don't use `MongoDB::Cursor` in `Storage/Iterator/GridFS.pm`.
+
+
 ---
 
 [gridfs]: http://docs.mongodb.org/manual/core/gridfs/

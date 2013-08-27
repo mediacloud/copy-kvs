@@ -271,29 +271,10 @@ sub list_iterator($;$)
 
     $self->_connect_to_mongodb_or_die();
 
-    my $filenames = [];
-
-    my $offset_objectid;
-    if ($filename_offset) {
-        # Find the ObjectId of the offset filename
-        $offset_objectid       = $self->_mongodb_fs_files_collection->find_one({ filename => $filename_offset }, {_id => 1});
-        unless ($offset_objectid) {
-            LOGDIE("Offset file '$filename_offset' was not found.");
-        }
-        $offset_objectid = $offset_objectid->{_id}->{value};
-        unless (valid_objectid($offset_objectid)) {
-            LOGDIE("Offset file's '$filename_offset' ObjectId '$offset_objectid' is not valid.");
-        }
-    }
-
-    my $find_query = { };
-    if ($offset_objectid) {
-        $find_query = { _id => { '$gt' => MongoDB::OID->new(value => $offset_objectid) } };
-    }
-
-    # Sort by ObjectId because it is indexed and contains an insertion timestamp
-    my $cursor = $self->_mongodb_fs_files_collection->query($find_query)->sort({_id => 1})->fields({_id=>1, filename=>1});
-    my $iterator = Storage::Iterator::GridFS->new(cursor => $cursor, read_attempts => MONGODB_READ_ATTEMPTS);
+    # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
+    my $iterator = Storage::Iterator::GridFS->new(fs_files_collection => $self->_mongodb_fs_files_collection,
+                                                  offset => $filename_offset,
+                                                  read_attempts => MONGODB_READ_ATTEMPTS);
     return $iterator;
 }
 

@@ -85,15 +85,16 @@ sub next($)
             LOGDIE("Unable to read the next filename from S3 after " . $self->_read_attempts . " retries.");
         }
 
+        # Store the chunk of filenames locally
+        for my $filename (@{$list->{keys}}) {
+            $filename = _strip_prefix($filename->{key}, $self->_prefix) or LOGDIE("Empty filename.");
+            push (@{$self->_filenames}, $filename);
+        }
+
         # Write down the new offset
         $self->_offset(_strip_prefix($list->{next_marker}, $self->_prefix));
         unless ($list->{is_truncated}) {
             $self->_end_of_data(1);
-        }
-
-        for my $filename (@{$list->{keys}}) {
-            $filename = _strip_prefix($filename->{key}, $self->_prefix) or LOGDIE("Empty filename.");
-            push (@{$self->_filenames}, $filename);
         }
     }
 

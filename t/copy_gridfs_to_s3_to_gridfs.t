@@ -83,7 +83,15 @@ my $response = $test_bucket->list_all;
 my @files_restored_from_s3;
 foreach my $key ( @{ $response->{keys} } ) {
 	my $file = $test_bucket->get_key($key->{key});
-	push (@files_restored_from_s3, {filename => $key->{key}, contents => $file->{value}});
+	$file = {
+		filename => $key->{key},
+		contents => $file->{value}
+	};
+	if ($config->{amazon_s3}->{folder_name}) {
+		# Strip folder prefix
+		$file->{filename} =~ s/^$config->{amazon_s3}->{folder_name}\///;
+	}
+	push (@files_restored_from_s3, $file);
 }
 # say STDERR "Expected: " . Dumper(@files);
 # say STDERR "Got: " . Dumper(@files_restored_from_s3);

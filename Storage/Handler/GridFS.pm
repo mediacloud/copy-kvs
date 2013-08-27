@@ -56,7 +56,7 @@ sub BUILD {
     $self->_config_host($args->{host} || 'localhost');
     $self->_config_port($args->{port} || 27017);
     $self->_config_database($args->{database}) or LOGDIE("Database is not defined.");
-    $self->_config_timeout(int($args->{timeout}) || -1);
+    $self->_config_timeout($args->{timeout} || -1);
     $self->_pid($$);
 }
 

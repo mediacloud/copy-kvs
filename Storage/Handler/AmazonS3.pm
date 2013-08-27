@@ -69,7 +69,7 @@ sub BUILD {
     $self->_config_secret_access_key($args->{secret_access_key}) or LOGDIE("Secret access key is not defined.");
     $self->_config_bucket_name($args->{bucket_name}) or LOGDIE("Folder name is not defined.");
     $self->_config_folder_name($args->{folder_name} || '');
-    $self->_config_timeout(int($args->{timeout}) || 60);
+    $self->_config_timeout($args->{timeout} || 60);
 
     # Add slash to the end of the folder name (if it doesn't exist yet)
     if ( $self->_config_folder_name and substr( $self->_config_folder_name, -1, 1 ) ne '/' )

@@ -56,7 +56,7 @@ sub BUILD {
     $self->_config_host($args->{host} || 'localhost');
     $self->_config_port($args->{port} || 27017);
     $self->_config_database($args->{database}) or LOGDIE("Database is not defined.");
-    $self->_config_timeout($args->{timeout} || 60);
+    $self->_config_timeout(int($args->{timeout}) || -1);
     $self->_pid($$);
 }
 
@@ -85,9 +85,9 @@ sub _connect_to_mongodb_or_die($)
     }
 
     # Timeout should "fit in" at least MONGODB_READ_ATTEMPTS number of retries
-    # within the time period
-    my $query_timeout = floor(($self->_config_timeout / MONGODB_READ_ATTEMPTS) - 1);
-    if ($query_timeout < 10) {
+    # within the time period (unless it's "no timeout")
+    my $query_timeout = ($self->_config_timeout == -1 ? -1 : floor(($self->_config_timeout / MONGODB_READ_ATTEMPTS) - 1));
+    if ($query_timeout != -1 and $query_timeout < 10) {
         LOGDIE("MongoDB query timeout ($query_timeout s) is too small.");
     }
 
@@ -95,7 +95,7 @@ sub _connect_to_mongodb_or_die($)
     $self->_mongodb_client(MongoDB::MongoClient->new(
         host => $self->_config_host,
         port => $self->_config_port,
-        query_timeout => ($query_timeout * 1000)
+        query_timeout => ($query_timeout == -1 ? -1 : $query_timeout * 1000)
     ));
     unless ( $self->_mongodb_client )
     {
@@ -122,7 +122,7 @@ sub _connect_to_mongodb_or_die($)
     # Save PID
     $self->_pid($$);
 
-    INFO("Initialized GridFS storage at " . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ") with query timeout = $query_timeout s, read attempts = " . MONGODB_READ_ATTEMPTS . ", write attempts = " . MONGODB_WRITE_ATTEMPTS);
+    INFO("Initialized GridFS storage at " . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ") with query timeout = " . ($query_timeout == -1 ? "no timeout" : "$query_timeout s" ) . ", read attempts = " . MONGODB_READ_ATTEMPTS . ", write attempts = " . MONGODB_WRITE_ATTEMPTS);
 }
 
 sub head($$)

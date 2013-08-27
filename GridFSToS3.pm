@@ -10,6 +10,7 @@ use Storage::Handler::AmazonS3;
 use Storage::Handler::GridFS;
 
 use Parallel::Fork::BossWorkerAsync;
+use List::Util qw(max);
 
 # Global variable so it can be used by:
 # * _sigint() -- called independently from main()
@@ -46,7 +47,7 @@ sub _gridfs_handler_for_pid($$)
             host => $config->{mongodb_gridfs}->{host} || 'localhost',
             port => $config->{mongodb_gridfs}->{port} || 27017,
             database => $config->{mongodb_gridfs}->{database},
-            timeout => $_config->{worker_timeout} || 60
+            timeout => int($_config->{mongodb_gridfs}->{timeout}) || -1
         );
         unless ($_gridfs_handlers{$pid}) {
             LOGDIE("Unable to initialize GridFS handler for PID $pid");
@@ -70,7 +71,7 @@ sub _s3_handler_for_pid($$)
             secret_access_key => $config->{amazon_s3}->{secret_access_key},
             bucket_name => $config->{amazon_s3}->{bucket_name},
             folder_name => $config->{amazon_s3}->{folder_name} || '',
-            timeout => $_config->{worker_timeout} || 60
+            timeout => int($_config->{amazon_s3}->{timeout}) || 60
         );
         unless ($_s3_handlers{$pid}) {
             LOGDIE("Unable to initialize S3 handler for PID $pid");
@@ -218,14 +219,15 @@ sub copy_gridfs_to_s3($)
         INFO("Will resume from '$offset_filename'.");
     }
 
-    my $worker_timeout = $_config->{worker_timeout} or LOGDIE("Invalid worker timeout ('worker_timeout').");
     my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
     my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+    my $gridfs_timeout = int($_config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
+    my $s3_timeout = int($_config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
         work_handler    => \&_upload_file_to_s3,
-        global_timeout  => $worker_timeout,
+        global_timeout  => ($gridfs_timeout == -1 ? 0 : max($gridfs_timeout, $s3_timeout) * 3),
         worker_count => $worker_threads,
     );
 
@@ -302,14 +304,15 @@ sub copy_s3_to_gridfs($)
         INFO("Will resume from '$offset_filename'.");
     }
 
-    my $worker_timeout = $_config->{worker_timeout} or LOGDIE("Invalid worker timeout ('worker_timeout').");
     my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
     my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+    my $gridfs_timeout = int($_config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
+    my $s3_timeout = int($_config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
         work_handler    => \&_download_file_to_gridfs,
-        global_timeout  => $worker_timeout,
+        global_timeout  => ($gridfs_timeout == -1 ? 0 : max($gridfs_timeout, $s3_timeout) * 3),
         worker_count => $worker_threads,
     );
 

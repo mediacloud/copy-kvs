@@ -21,12 +21,6 @@ file_with_last_filename_copied_from_gridfs_to_s3   : "copy-gridfs-to-s3.last"
 # can resume the copying later (or when you add more files to S3).
 file_with_last_filename_copied_from_s3_to_gridfs    : "copy-s3-to-gridfs.last"
 
-# Global timeout for each of the workers
-#
-# How much to wait for each of the uploads / downloads to be completed, in
-# seconds.
-worker_timeout  : 60
-
 # How many worker threads to spawn
 worker_threads  : 32
 
@@ -38,6 +32,8 @@ mongodb_gridfs:
     host        : "localhost" 
     port        : "27017" 
     database    : "my_files"
+    # no timeout by default (wait forever because of the "recv timed out" errors)
+    timeout     : -1
 
 # Amazon S3 connection settings
 amazon_s3:
@@ -46,4 +42,6 @@ amazon_s3:
     bucket_name             : "backup-gridfs"
     # If set, files in S3 will be saved as "<downloads_folder_name>/<filename>"
     # instead of just "<filename>"; may be empty
-    folder_name   : "backup"  
+    folder_name             : "backup"
+    # will try 3 times within 19 seconds:
+    timeout                 : 60

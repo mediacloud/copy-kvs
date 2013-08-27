@@ -11,8 +11,9 @@ This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to
 4. To copy files **from S3 to GridFS**, run: `./copy-s3-to-gridfs.pl gridfs-to-s3.yml`
 
 
-## Requirements (Perl module dependencies)
+## Requirements
 
+* Perl 5.10+
 * [Moose](http://search.cpan.org/dist/Moose/)
 * [Log::Log4perl](http://search.cpan.org/dist/Log-Log4perl/)
 * [YAML](http://search.cpan.org/dist/YAML/)

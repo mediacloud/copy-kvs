@@ -36,6 +36,7 @@ has '_config_use_ssl' => ( is => 'rw', isa => 'Bool' );
 has '_config_head_before_putting' => ( is => 'rw', isa => 'Bool' );
 has '_config_head_before_getting' => ( is => 'rw', isa => 'Bool' );
 has '_config_head_before_deleting' => ( is => 'rw', isa => 'Bool' );
+has '_config_overwrite' => ( is => 'rw', isa => 'Bool' );
 
 # Net::Amazon::S3 instance, bucket (lazy-initialized to prevent multiple forks using the same object)
 has '_s3' => ( is => 'rw' );
@@ -62,10 +63,11 @@ sub BUILD {
     $self->_config_bucket_name($args->{bucket_name}) or LOGDIE("Folder name is not defined.");
     $self->_config_folder_name($args->{folder_name} || '');
     $self->_config_timeout($args->{timeout} || 60);
-    $self->_config_use_ssl($args->{use_ssl} || 0);
-    $self->_config_head_before_putting($args->{head_before_putting} || 0);
-    $self->_config_head_before_getting($args->{head_before_getting} || 0);
-    $self->_config_head_before_deleting($args->{head_before_deleting} || 0);
+    $self->_config_use_ssl($args->{use_ssl} // 0);
+    $self->_config_head_before_putting($args->{head_before_putting} // 0);
+    $self->_config_head_before_getting($args->{head_before_getting} // 0);
+    $self->_config_head_before_deleting($args->{head_before_deleting} // 0);
+    $self->_config_overwrite($args->{overwrite} // 1);
 
     # Add slash to the end of the folder name (if it doesn't exist yet)
     if ( $self->_config_folder_name and substr( $self->_config_folder_name, -1, 1 ) ne '/' )
@@ -120,7 +122,7 @@ sub _initialize_s3_or_die($)
     {
         LOGDIE("Unable to get bucket '" . $self->_config_bucket_name . "'.");
     } else {
-        DEBUG("Bucket was found: " . $self->_s3_bucket);
+        # DEBUG("Bucket was found: " . $self->_s3_bucket);
     }
 
     # Save PID
@@ -183,13 +185,18 @@ sub put($$$)
 
     $self->_initialize_s3_or_die();
 
-    if ( $self->_config_head_before_putting )
+    if ( $self->_config_head_before_putting or (! $self->_config_overwrite) )
     {
         if ( $self->head( $filename ) )
         {
-            WARN("File '$filename' already exists, " .
-              "will store a new version or overwrite ".
-              "(depending on whether or not versioning is enabled).");
+            if ($self->_config_overwrite) {
+                WARN("File '$filename' already exists, " .
+                  "will store a new version or overwrite ".
+                  "(depending on whether or not versioning is enabled).");
+            } else {
+                INFO("File '$filename' already exists, will skip it.");
+                return 1;
+            }
         }
     }
 

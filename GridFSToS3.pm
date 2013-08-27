@@ -276,6 +276,8 @@ sub copy_gridfs_to_s3($)
     # Remove lock file
     _unlink_lock_file($_config);
 
+    INFO("Done.");
+
     return 1;
 }
 
@@ -360,6 +362,8 @@ sub copy_s3_to_gridfs($)
 
     # Remove lock file
     _unlink_lock_file($_config);
+
+    INFO("Done.");
 
     return 1;
 }

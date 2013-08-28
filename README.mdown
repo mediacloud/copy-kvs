@@ -113,7 +113,7 @@ The test `t/copy_gridfs_to_s3_to_gridfs.t` will create and afterwards remove:
 
 ## Known bugs
 
-### `recv timed out`
+### (probably fixed) `recv timed out`
 
 After copying a bunch of files from GridFS (MongoDB v2.2.3) to S3, one of the workers crashes with:
 

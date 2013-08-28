@@ -1,6 +1,9 @@
 package Storage::Handler::AmazonS3;
 
 # class for storing / loading files from / to Amazon S3
+#
+# FIXME wrap S3-touching code into eval{};
+#
 
 use strict;
 use warnings;
@@ -96,33 +99,39 @@ sub _initialize_s3_or_die($)
         LOGDIE("Amazon S3 request timeout ($request_timeout s) is too small.");
     }
 
-    # Initialize
-    $self->_s3(Net::Amazon::S3->new(
-        aws_access_key_id     => $self->_config_access_key_id,
-        aws_secret_access_key => $self->_config_secret_access_key,
-        retry                 => 1,
-        secure                => $self->_config_use_ssl,
-        timeout               => $request_timeout
-    ));
-    unless ( $self->_s3 )
-    {
-        LOGDIE("Unable to initialize Net::Amazon::S3 instance with access key '" . $self->_config_access_key_id . "'.");
-    }
+    eval {
 
-    # Get the bucket ($_s3->bucket would not verify that the bucket exists)
-    my $response = $self->_s3->buckets;
-    foreach my $bucket ( @{ $response->{buckets} } )
-    {
-        if ( $bucket->bucket eq $self->_config_bucket_name )
+        # Initialize
+        $self->_s3(Net::Amazon::S3->new(
+            aws_access_key_id     => $self->_config_access_key_id,
+            aws_secret_access_key => $self->_config_secret_access_key,
+            retry                 => 1,
+            secure                => $self->_config_use_ssl,
+            timeout               => $request_timeout
+        ));
+        unless ( $self->_s3 )
         {
-            $self->_s3_bucket($bucket);
+            LOGDIE("Unable to initialize Net::Amazon::S3 instance with access key '" . $self->_config_access_key_id . "'.");
         }
-    }
-    unless ( $self->_s3_bucket )
-    {
-        LOGDIE("Unable to get bucket '" . $self->_config_bucket_name . "'.");
-    } else {
-        # DEBUG("Bucket was found: " . $self->_s3_bucket);
+
+        # Get the bucket ($_s3->bucket would not verify that the bucket exists)
+        my $response = $self->_s3->buckets;
+        foreach my $bucket ( @{ $response->{buckets} } )
+        {
+            if ( $bucket->bucket eq $self->_config_bucket_name )
+            {
+                $self->_s3_bucket($bucket);
+            }
+        }
+        unless ( $self->_s3_bucket )
+        {
+            LOGDIE("Unable to get bucket '" . $self->_config_bucket_name . "'.");
+        } else {
+            # DEBUG("Bucket was found: " . $self->_s3_bucket);
+        }
+    };
+    if ($@) {
+        LOGDIE("Unable to initialize S3 storage handler because: $@");
     }
 
     # Save PID
@@ -153,7 +162,40 @@ sub head($$)
 
     $self->_initialize_s3_or_die();
 
-    if ($self->_s3_bucket->head_key($self->_path_for_filename($filename))) {
+    # S3 sometimes times out when reading, so we'll try to read several times
+    my $attempt_to_head_succeeded = 0;
+    my $file                      = undef;
+    for ( my $retry = 0 ; $retry < AMAZON_S3_READ_ATTEMPTS ; ++$retry )
+    {
+        if ( $retry > 0 )
+        {
+            WARN("Retrying ($retry)...");
+        }
+
+        eval {
+
+            # HEAD
+            $file = $self->_s3_bucket->head_key($self->_path_for_filename($filename));
+
+            $attempt_to_head_succeeded = 1;
+        };
+
+        if ( $@ )
+        {
+            WARN("Attempt to check if file '$filename' exists on S3 didn't succeed because: $@");
+        }
+        else
+        {
+            last;
+        }
+    }
+
+    unless ( $attempt_to_head_succeeded )
+    {
+        LOGDIE("Unable to HEAD '$filename' on S3 after " . AMAZON_S3_READ_ATTEMPTS . " retries.");
+    }
+
+    if ($file) {
         return 1;
     } else {
         return 0;
@@ -166,15 +208,45 @@ sub delete($$)
 
     $self->_initialize_s3_or_die();
 
-    if ($self->_config_head_before_deleting)
+    # S3 sometimes times out when deleting, so we'll try to delete several times
+    my $attempt_to_delete_succeeded = 0;
+    for ( my $retry = 0 ; $retry < AMAZON_S3_WRITE_ATTEMPTS ; ++$retry )
     {
-        unless ( $self->head( $filename ) )
+        if ( $retry > 0 )
         {
-            LOGDIE("File '$filename' does not exist.");
+            WARN("Retrying ($retry)...");
+        }
+
+        eval {
+
+            # Delete
+            if ($self->_config_head_before_deleting)
+            {
+                unless ( $self->head( $filename ) )
+                {
+                    LOGDIE("File '$filename' does not exist.");
+                }
+            }
+
+            $self->_s3_bucket->delete_key($self->_path_for_filename($filename)) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+
+            $attempt_to_delete_succeeded = 1;
+        };
+
+        if ( $@ )
+        {
+            WARN("Attempt to delete file '$filename' from S3 didn't succeed because: $@");
+        }
+        else
+        {
+            last;
         }
     }
 
-    $self->_s3_bucket->delete_key($self->_path_for_filename($filename)) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+    unless ( $attempt_to_delete_succeeded )
+    {
+        LOGDIE("Unable to delete '$filename' from S3 after " . AMAZON_S3_WRITE_ATTEMPTS . " retries.");
+    }
 
     return 1;
 }
@@ -184,21 +256,6 @@ sub put($$$)
     my ( $self, $filename, $contents ) = @_;
 
     $self->_initialize_s3_or_die();
-
-    if ( $self->_config_head_before_putting or (! $self->_config_overwrite) )
-    {
-        if ( $self->head( $filename ) )
-        {
-            if ($self->_config_overwrite) {
-                WARN("File '$filename' already exists, " .
-                  "will store a new version or overwrite ".
-                  "(depending on whether or not versioning is enabled).");
-            } else {
-                INFO("File '$filename' already exists, will skip it.");
-                return 1;
-            }
-        }
-    }
 
     my $write_was_successful = 0;
 
@@ -212,6 +269,23 @@ sub put($$$)
 
         eval {
 
+            # HEAD (if needed)
+            if ( $self->_config_head_before_putting or (! $self->_config_overwrite) )
+            {
+                if ( $self->head( $filename ) )
+                {
+                    if ($self->_config_overwrite) {
+                        WARN("File '$filename' already exists, " .
+                          "will store a new version or overwrite ".
+                          "(depending on whether or not versioning is enabled).");
+                    } else {
+                        INFO("File '$filename' already exists, will skip it.");
+                        return 1;
+                    }
+                }
+            }
+
+            # PUT
             $self->_s3_bucket->add_key($self->_path_for_filename($filename), $contents) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
             $write_was_successful = 1;
 
@@ -219,7 +293,7 @@ sub put($$$)
 
         if ( $@ )
         {
-            WARN("Attempt to write to '$filename' didn't succeed because: $@");
+            WARN("Attempt to write '$filename' to S3 didn't succeed because: $@");
         }
         else
         {
@@ -229,7 +303,7 @@ sub put($$$)
 
     unless ( $write_was_successful )
     {
-        LOGDIE("Unable to write '$filename' from Amazon S3 after " . AMAZON_S3_WRITE_ATTEMPTS . " retries.");
+        LOGDIE("Unable to write '$filename' to Amazon S3 after " . AMAZON_S3_WRITE_ATTEMPTS . " retries.");
     }
 
     return 1;
@@ -240,14 +314,6 @@ sub get($$)
     my ( $self, $filename ) = @_;
 
     $self->_initialize_s3_or_die();
-
-    if ( $self->_config_head_before_getting )
-    {
-        unless ( $self->head( $filename ) )
-        {
-            LOGDIE("File '$filename' does not exist.");
-        }
-    }
 
     my $value = undef;
 
@@ -261,6 +327,16 @@ sub get($$)
 
         eval {
 
+            # HEAD (if needed)
+            if ( $self->_config_head_before_getting )
+            {
+                unless ( $self->head( $filename ) )
+                {
+                    LOGDIE("File '$filename' does not exist.");
+                }
+            }
+
+            # GET
             my $contents = $self->_s3_bucket->get_key($self->_path_for_filename($filename));
             unless (defined($contents)) {
                 LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
@@ -272,7 +348,7 @@ sub get($$)
 
         if ( $@ )
         {
-            WARN("Attempt to read from '$filename' didn't succeed because: $@");
+            WARN("Attempt to read '$filename' from S3 didn't succeed because: $@");
         }
         else
         {

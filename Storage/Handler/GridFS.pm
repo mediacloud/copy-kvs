@@ -91,38 +91,50 @@ sub _connect_to_mongodb_or_die($)
         LOGDIE("MongoDB query timeout ($query_timeout s) is too small.");
     }
 
-    # Connect
-    $self->_mongodb_client(MongoDB::MongoClient->new(
-        host => $self->_config_host,
-        port => $self->_config_port,
-        query_timeout => ($query_timeout == -1 ? -1 : $query_timeout * 1000)
-    ));
-    unless ( $self->_mongodb_client )
-    {
-        LOGDIE("Unable to connect to MongoDB (" . $self->_config_host . ":" . $self->_config_port . ").");
-    }
+    eval {
 
-    $self->_mongodb_database($self->_mongodb_client->get_database( $self->_config_database ));
-    unless ( $self->_mongodb_database )
-    {
-        LOGDIE("Unable to choose a MongoDB database '" . $self->_config_database . "'.");
-    }
+        # Connect
+        $self->_mongodb_client(MongoDB::MongoClient->new(
+            host => $self->_config_host,
+            port => $self->_config_port,
+            query_timeout => ($query_timeout == -1 ? -1 : $query_timeout * 1000)
+        ));
+        unless ( $self->_mongodb_client )
+        {
+            LOGDIE("Unable to connect to MongoDB (" . $self->_config_host . ":" . $self->_config_port . ").");
+        }
 
-    $self->_mongodb_fs_files_collection($self->_mongodb_database->get_collection('fs.files'));
-    unless ($self->_mongodb_fs_files_collection) {
-        LOGDIE("Unable to use MongoDB database's '" . $self->_config_database . "' collection 'fs.files'.");
-    }
+        $self->_mongodb_database($self->_mongodb_client->get_database( $self->_config_database ));
+        unless ( $self->_mongodb_database )
+        {
+            LOGDIE("Unable to choose a MongoDB database '" . $self->_config_database . "'.");
+        }
 
-    $self->_mongodb_gridfs($self->_mongodb_database->get_gridfs);
-    unless ( $self->_mongodb_gridfs )
-    {
-        LOGDIE("Unable to use MongoDB database '" . $self->_config_database . "' as GridFS database.");
+        $self->_mongodb_fs_files_collection($self->_mongodb_database->get_collection('fs.files'));
+        unless ($self->_mongodb_fs_files_collection) {
+            LOGDIE("Unable to use MongoDB database's '" . $self->_config_database . "' collection 'fs.files'.");
+        }
+
+        $self->_mongodb_gridfs($self->_mongodb_database->get_gridfs);
+        unless ( $self->_mongodb_gridfs )
+        {
+            LOGDIE("Unable to use MongoDB database '" . $self->_config_database . "' as GridFS database.");
+        }
+    };
+    if ($@) {
+        LOGDIE("Unable to initialize GridFS storage handler because: $@");
     }
 
     # Save PID
     $self->_pid($$);
 
-    INFO("Initialized GridFS storage at " . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database . ") with query timeout = " . ($query_timeout == -1 ? "no timeout" : "$query_timeout s" ) . ", read attempts = " . MONGODB_READ_ATTEMPTS . ", write attempts = " . MONGODB_WRITE_ATTEMPTS);
+    INFO("Initialized GridFS storage at "
+         . $self->_config_host . ":"
+         . $self->_config_port . "/"
+         . $self->_config_database . ") with query timeout = "
+         . ($query_timeout == -1 ? "no timeout" : "$query_timeout s" )
+         . ", read attempts = " . MONGODB_READ_ATTEMPTS
+         . ", write attempts = " . MONGODB_WRITE_ATTEMPTS);
 }
 
 sub head($$)
@@ -131,9 +143,41 @@ sub head($$)
 
     $self->_connect_to_mongodb_or_die();
 
-    my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
+    # MongoDB sometimes times out when reading because it's busy creating a new data file,
+    # so we'll try to read several times
+    my $attempt_to_head_succeeded = 0;
+    my $file                      = undef;
+    for ( my $retry = 0 ; $retry < MONGODB_READ_ATTEMPTS ; ++$retry )
+    {
+        if ( $retry > 0 )
+        {
+            WARN("Retrying ($retry)...");
+        }
 
-    if ( defined $file )
+        eval {
+
+            # HEAD
+            $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
+
+            $attempt_to_head_succeeded = 1;
+        };
+
+        if ( $@ )
+        {
+            WARN("Attempt to check if file '$filename' exists on GridFS didn't succeed because: $@");
+        }
+        else
+        {
+            last;
+        }
+    }
+
+    unless ( $attempt_to_head_succeeded )
+    {
+        LOGDIE("Unable to HEAD '$filename' on GridFS after " . MONGODB_READ_ATTEMPTS . " retries.");
+    }
+
+    if ( $file )
     {
         return 1;
     } else {
@@ -147,11 +191,41 @@ sub delete($$)
 
     $self->_connect_to_mongodb_or_die();
 
-    # Remove file(s) if already exist(s) -- MongoDB might store several versions of the same file
-    while ( my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
+    # MongoDB sometimes times out when deleting because it's busy creating a new data file,
+    # so we'll try to delete several times
+    my $attempt_to_delete_succeeded = 0;
+    for ( my $retry = 0 ; $retry < MONGODB_WRITE_ATTEMPTS ; ++$retry )
     {
-        # "safe -- If true, each remove will be checked for success and die on failure."
-        $self->_mongodb_gridfs->remove( { 'filename' => $filename }, { safe => 1 } );
+        if ( $retry > 0 )
+        {
+            WARN("Retrying ($retry)...");
+        }
+
+        eval {
+
+            # Remove file(s) if already exist(s) -- MongoDB might store several versions of the same file
+            while ( my $file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } ) )
+            {
+                # "safe -- If true, each remove will be checked for success and die on failure."
+                $self->_mongodb_gridfs->remove( { 'filename' => $filename }, { safe => 1 } );
+            }
+
+            $attempt_to_delete_succeeded = 1;
+        };
+
+        if ( $@ )
+        {
+            WARN("Attempt to delete file '$filename' from GridFS didn't succeed because: $@");
+        }
+        else
+        {
+            last;
+        }
+    }
+
+    unless ( $attempt_to_delete_succeeded )
+    {
+        LOGDIE("Unable to delete '$filename' from GridFS after " . MONGODB_WRITE_ATTEMPTS . " retries.");
     }
 
     return 1;

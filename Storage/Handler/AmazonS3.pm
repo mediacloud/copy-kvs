@@ -270,6 +270,7 @@ sub put($$$)
         eval {
 
             # HEAD (if needed)
+            my $skip = 0;
             if ( $self->_config_head_before_putting or (! $self->_config_overwrite) )
             {
                 if ( $self->head( $filename ) )
@@ -280,13 +281,16 @@ sub put($$$)
                           "(depending on whether or not versioning is enabled).");
                     } else {
                         INFO("File '$filename' already exists, will skip it.");
-                        return 1;
+                        $skip = 1;
                     }
                 }
             }
 
             # PUT
-            $self->_s3_bucket->add_key($self->_path_for_filename($filename), $contents) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+            unless ($skip) {
+                $self->_s3_bucket->add_key($self->_path_for_filename($filename), $contents) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+            }
+            
             $write_was_successful = 1;
 
         };

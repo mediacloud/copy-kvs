@@ -49,8 +49,9 @@ amazon_s3:
     use_ssl                 : 0
     # Whether to check if the file exists (by sending a HEAD request) before doing
     # anything else.
-    # Setting to "yes" will increase both the script verbosity and Amazon S3 costs
-    # (because HEAD requests cost too!)
+    # Setting to "yes" will increase both the script verbosity (useful for
+    # debugging and paranoid types) and Amazon S3 costs (because HEAD requests
+    # cost too!)
     head_before:
         # HEAD before PUTting a file (1/0)
         put                 : 0
@@ -59,5 +60,7 @@ amazon_s3:
         # HEAD before DELETing a file (1/0)
         delete              : 0
     # Overwrite the file if it already exists (1/0)?
-    # (if you set it to 0, "head_before->put" will be enabled)
+    # (if you set it to 0, "head_before->put" will be enabled because in order
+    # to ensure that the file doesn't get overwritten, the script has to check
+    # whether or not the file exists first)
     overwrite               : 1

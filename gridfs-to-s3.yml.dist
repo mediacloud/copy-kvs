@@ -60,4 +60,4 @@ amazon_s3:
         delete              : 0
     # Overwrite the file if it already exists (1/0)?
     # (if you set it to 0, "head_before->put" will be enabled)
-    overwrite               : 0
+    overwrite               : 1

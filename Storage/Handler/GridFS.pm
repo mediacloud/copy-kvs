@@ -291,8 +291,6 @@ sub get($$)
 
     $self->_connect_to_mongodb_or_die();
 
-    my $id = MongoDB::OID->new( filename => $filename );
-
     # MongoDB sometimes times out when reading because it's busy creating a new data file,
     # so we'll try to read several times
     my $attempt_to_read_succeeded = 0;
@@ -305,6 +303,8 @@ sub get($$)
         }
 
         eval {
+
+            my $id = MongoDB::OID->new( filename => $filename );
 
             # Read
             my $gridfs_file = $self->_mongodb_gridfs->find_one( { 'filename' => $filename } );
@@ -345,10 +345,18 @@ sub list_iterator($;$)
 
     $self->_connect_to_mongodb_or_die();
 
-    # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
-    my $iterator = Storage::Iterator::GridFS->new(fs_files_collection => $self->_mongodb_fs_files_collection,
-                                                  offset => $filename_offset,
-                                                  read_attempts => MONGODB_READ_ATTEMPTS);
+    my $iterator;
+    eval {
+        # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
+        my $iterator = Storage::Iterator::GridFS->new(fs_files_collection => $self->_mongodb_fs_files_collection,
+                                                      offset => $filename_offset,
+                                                      read_attempts => MONGODB_READ_ATTEMPTS);
+    };
+    if ($@ or (! $iterator)) {
+        LOGDIE("Unable to create GridFS iterator for filename offset '$filename_offset'");
+        return undef;
+    }
+
     return $iterator;
 }
 

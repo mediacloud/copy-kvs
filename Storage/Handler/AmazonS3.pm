@@ -1,9 +1,6 @@
 package Storage::Handler::AmazonS3;
 
 # class for storing / loading files from / to Amazon S3
-#
-# FIXME wrap S3-touching code into eval{};
-#
 
 use strict;
 use warnings;
@@ -374,11 +371,19 @@ sub list_iterator($;$)
 
     $self->_initialize_s3_or_die();
 
-    my $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
-                                                    bucket_name => $self->_config_bucket_name,
-                                                    prefix => $self->_config_folder_name,
-                                                    offset => $filename_offset,
-                                                    read_attempts => AMAZON_S3_READ_ATTEMPTS);
+    my $iterator;
+    eval {
+        $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
+                                                        bucket_name => $self->_config_bucket_name,
+                                                        prefix => $self->_config_folder_name,
+                                                        offset => $filename_offset,
+                                                        read_attempts => AMAZON_S3_READ_ATTEMPTS);
+    };
+    if ($@ or (! $iterator)) {
+        LOGDIE("Unable to create Amazon S3 iterator for filename offset '$filename_offset'");
+        return undef;
+    }
+
     return $iterator;
 }
 

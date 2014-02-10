@@ -350,9 +350,9 @@ sub list_iterator($;$)
     my $iterator;
     eval {
         # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
-        my $iterator = Storage::Iterator::GridFS->new(fs_files_collection => $self->_mongodb_fs_files_collection,
-                                                      offset => $filename_offset,
-                                                      read_attempts => MONGODB_READ_ATTEMPTS);
+        $iterator = Storage::Iterator::GridFS->new(fs_files_collection => $self->_mongodb_fs_files_collection,
+                                                   offset => $filename_offset,
+                                                   read_attempts => MONGODB_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
         LOGDIE("Unable to create GridFS iterator for filename offset '" . ($filename_offset // 'undef') . "': $@");

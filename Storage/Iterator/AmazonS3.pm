@@ -31,8 +31,8 @@ sub BUILD {
 
     $self->_s3($args->{s3}) or LOGDIE("Net::Amazon::S3 object is undefined.");
     $self->_bucket_name($args->{bucket_name}) or LOGDIE("Bucket name is undefined.");
-    $self->_prefix($args->{prefix} || '');   # No prefix (folder)
-    $self->_offset($args->{offset} || '');   # No offset (list from beginning)
+    $self->_prefix($args->{prefix} // '');   # No prefix (folder)
+    $self->_offset($args->{offset} // '');   # No offset (list from beginning)
     $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
 }
 

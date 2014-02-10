@@ -30,7 +30,7 @@ sub BUILD {
     my $args = shift;
 
     $self->_fs_files_collection($args->{fs_files_collection}) or LOGDIE("MongoDB fs.files collection is undefined.");
-    $self->_offset($args->{offset} || '');   # No offset (list from beginning)
+    $self->_offset($args->{offset} // '');   # No offset (list from beginning)
     $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
 }
 

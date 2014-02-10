@@ -382,10 +382,7 @@ sub list_iterator($;$)
 
     $self->_initialize_s3_or_die();
 
-    unless (defined $filename_offset) {
-        LOGDIE("Filename offset for creating Amazon S3 iterator is undefined");
-        return undef;
-    }
+    $filename_offset //= '';
 
     my $iterator;
     eval {

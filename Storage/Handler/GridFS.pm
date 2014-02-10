@@ -355,7 +355,7 @@ sub list_iterator($;$)
                                                       read_attempts => MONGODB_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
-        LOGDIE("Unable to create GridFS iterator for filename offset '" . ($filename_offset // 'undef') . "'");
+        LOGDIE("Unable to create GridFS iterator for filename offset '" . ($filename_offset // 'undef') . "': $@");
         return undef;
     }
 

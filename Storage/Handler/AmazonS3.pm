@@ -393,7 +393,7 @@ sub list_iterator($;$)
                                                      read_attempts => AMAZON_S3_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
-        LOGDIE("Unable to create Amazon S3 iterator for filename offset '" . ($filename_offset // 'undef' ) . "'");
+        LOGDIE("Unable to create Amazon S3 iterator for filename offset '" . ($filename_offset // 'undef' ) . "': $@");
         return undef;
     }
 

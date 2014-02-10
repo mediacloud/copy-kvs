@@ -371,6 +371,11 @@ sub list_iterator($;$)
 
     $self->_initialize_s3_or_die();
 
+    unless (defined $filename_offset) {
+        LOGDIE("Filename offset for creating Amazon S3 iterator is undefined");
+        return undef;
+    }
+
     my $iterator;
     eval {
         $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
@@ -380,7 +385,7 @@ sub list_iterator($;$)
                                                         read_attempts => AMAZON_S3_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
-        LOGDIE("Unable to create Amazon S3 iterator for filename offset '$filename_offset'");
+        LOGDIE("Unable to create Amazon S3 iterator for filename offset '" . ($filename_offset // 'undef' ) . "'");
         return undef;
     }
 

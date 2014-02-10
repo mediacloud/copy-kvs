@@ -345,6 +345,11 @@ sub list_iterator($;$)
 
     $self->_connect_to_mongodb_or_die();
 
+    unless (defined $filename_offset) {
+        LOGDIE("Filename offset for creating GridFS iterator is undefined");
+        return undef;
+    }
+
     my $iterator;
     eval {
         # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
@@ -353,7 +358,7 @@ sub list_iterator($;$)
                                                       read_attempts => MONGODB_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
-        LOGDIE("Unable to create GridFS iterator for filename offset '$filename_offset'");
+        LOGDIE("Unable to create GridFS iterator for filename offset '" . ($filename_offset // 'undef') . "'");
         return undef;
     }
 

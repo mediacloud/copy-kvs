@@ -387,10 +387,10 @@ sub list_iterator($;$)
     my $iterator;
     eval {
         $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
-                                                        bucket_name => $self->_config_bucket_name,
-                                                        prefix => $self->_config_folder_name,
-                                                        offset => $filename_offset,
-                                                        read_attempts => AMAZON_S3_READ_ATTEMPTS);
+                                                     bucket_name => $self->_config_bucket_name,
+                                                     prefix => $self->_config_folder_name,
+                                                     offset => $filename_offset,
+                                                     read_attempts => AMAZON_S3_READ_ATTEMPTS);
     };
     if ($@ or (! $iterator)) {
         LOGDIE("Unable to create Amazon S3 iterator for filename offset '" . ($filename_offset // 'undef' ) . "'");

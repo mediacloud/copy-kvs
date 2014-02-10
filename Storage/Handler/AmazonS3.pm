@@ -225,7 +225,11 @@ sub delete($$)
                 }
             }
 
-            $self->_s3_bucket->delete_key($self->_path_for_filename($filename)) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+            unless ($self->_s3_bucket->delete_key($self->_path_for_filename($filename))) {
+                my $s3_errno = $self->_s3_bucket->err // 0;
+                my $s3_errstr = $self->_s3_bucket->errstr // 'undefined';
+                LOGDIE("Failed to DELETE file, S3 error: $s3_errno: $s3_errstr");
+            }
 
             $attempt_to_delete_succeeded = 1;
         };
@@ -285,7 +289,12 @@ sub put($$$)
 
             # PUT
             unless ($skip) {
-                $self->_s3_bucket->add_key($self->_path_for_filename($filename), $contents) or LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+                unless ($self->_s3_bucket->add_key($self->_path_for_filename($filename), $contents)) {
+
+                    my $s3_errno = $self->_s3_bucket->err // 0;
+                    my $s3_errstr = $self->_s3_bucket->errstr // 'undefined';
+                    LOGDIE("Failed to PUT file, S3 error: $s3_errno: $s3_errstr");
+                }
             }
             
             $write_was_successful = 1;
@@ -340,7 +349,9 @@ sub get($$)
             # GET
             my $contents = $self->_s3_bucket->get_key($self->_path_for_filename($filename));
             unless (defined($contents)) {
-                LOGDIE($self->_s3_bucket->err . ": " . $self->_s3_bucket->errstr);
+                my $s3_errno = $self->_s3_bucket->err // 0;
+                my $s3_errstr = $self->_s3_bucket->errstr // 'undefined';
+                LOGDIE("Failed to GET file (content is undefined), S3 error: $s3_errno: $s3_errstr");
             }
 
             $value = $contents->{value};

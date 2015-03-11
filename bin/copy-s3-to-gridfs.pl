@@ -12,10 +12,16 @@ sub main
 {
 	unless ($ARGV[0])
 	{
-		die("Usage: $0 config.yml");
+		die "Usage: $0 config.yml";
 	}
 
-	my $config = LoadFile($ARGV[0]) or die("Unable to read configuration from '$ARGV[0]': $!\n");
+	my $config;
+	eval {
+		$config = LoadFile($ARGV[0]);
+	};
+	if ( $@ ) {
+		die "Unable to read configuration from '$ARGV[0]': $@";
+	}
 
     GridFSToS3::copy_s3_to_gridfs($config);
 }

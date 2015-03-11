@@ -9,10 +9,6 @@ WriteMakefile(
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
       ? ('LICENSE'=> 'agpl')
       : ()),
-    PL_FILES          => {
-        'bin/copy-gridfs-to-s3.pl',
-        'bin/copy-s3-to-gridfs.pl',
-    },
     PREREQ_PM         => {
         'FindBin' => 0,
         'Log::Log4perl' => 1.43,

@@ -3,6 +3,8 @@ package GridFSToS3;
 use strict;
 use warnings;
 
+our $VERSION = '0.01';
+
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
 
@@ -374,3 +376,33 @@ sub copy_s3_to_gridfs($)
 }
 
 1;
+
+=head1 NAME
+
+GridFSToS3 - Copy objects between various key-value stores (MongoDB GridFS, Amazon S3, PostgreSQL BLOB tables)
+
+=head1 SYNOPSIS
+
+  use GridFSToS3;
+
+=head1 DESCRIPTION
+
+Copy objects between various key-value stores (MongoDB GridFS, Amazon S3, PostgreSQL BLOB tables).
+
+=head2 EXPORT
+
+None by default.
+
+=head1 AUTHOR
+
+Linas Valiukas, E<lt>lvaliukas@cyber.law.harvard.eduE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2013- Linas Valiukas, 2013- Berkman Center for Internet & Society.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.18.2 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut

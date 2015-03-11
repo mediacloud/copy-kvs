@@ -1,5 +1,22 @@
-.DS_Store
 gridfs-to-s3.yml
 *.last
 *.last-filename
 *.lock
+
+# OS X
+.DS_Store
+
+# POD
+pod2htm*.tmp
+
+# Perl module
+blib/
+_build/
+Makefile
+Makefile.old
+MYMETA.yml
+MYMETA.json
+Build
+pm_to_blib
+*.bak
+

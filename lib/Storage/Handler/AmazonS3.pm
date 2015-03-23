@@ -30,7 +30,7 @@ use constant AMAZON_S3_WRITE_ATTEMPTS => 3;
 has '_config_access_key_id' => ( is => 'rw', isa => 'Str' );
 has '_config_secret_access_key' => ( is => 'rw', isa => 'Str' );
 has '_config_bucket_name' => ( is => 'rw', isa => 'Str' );
-has '_config_folder_name' => ( is => 'rw', isa => 'Str' );
+has '_config_directory_name' => ( is => 'rw', isa => 'Str' );
 has '_config_timeout' => ( is => 'rw', isa => 'Int' );
 has '_config_use_ssl' => ( is => 'rw', isa => 'Bool' );
 has '_config_head_before_putting' => ( is => 'rw', isa => 'Bool' );
@@ -60,8 +60,8 @@ sub BUILD {
 
     $self->_config_access_key_id($args->{access_key_id}) or LOGDIE("Access key ID is not defined.");
     $self->_config_secret_access_key($args->{secret_access_key}) or LOGDIE("Secret access key is not defined.");
-    $self->_config_bucket_name($args->{bucket_name}) or LOGDIE("Folder name is not defined.");
-    $self->_config_folder_name($args->{folder_name} || '');
+    $self->_config_bucket_name($args->{bucket_name}) or LOGDIE("Directory name is not defined.");
+    $self->_config_directory_name($args->{directory_name} || '');
     $self->_config_timeout($args->{timeout} || 60);
     $self->_config_use_ssl($args->{use_ssl} // 0);
     $self->_config_head_before_putting($args->{head_before_putting} // 0);
@@ -69,10 +69,10 @@ sub BUILD {
     $self->_config_head_before_deleting($args->{head_before_deleting} // 0);
     $self->_config_overwrite($args->{overwrite} // 1);
 
-    # Add slash to the end of the folder name (if it doesn't exist yet)
-    if ( $self->_config_folder_name and substr( $self->_config_folder_name, -1, 1 ) ne '/' )
+    # Add slash to the end of the directory name (if it doesn't exist yet)
+    if ( $self->_config_directory_name and substr( $self->_config_directory_name, -1, 1 ) ne '/' )
     {
-        $self->_config_folder_name($self->_config_folder_name . '/');
+        $self->_config_directory_name($self->_config_directory_name . '/');
     }
 
     $self->_pid($$);
@@ -134,7 +134,7 @@ sub _initialize_s3_or_die($)
     # Save PID
     $self->_pid($$);
 
-    my $path = ( $self->_config_folder_name ? $self->_config_bucket_name . '/' . $self->_config_folder_name : $self->_config_bucket_name );
+    my $path = ( $self->_config_directory_name ? $self->_config_bucket_name . '/' . $self->_config_directory_name : $self->_config_bucket_name );
     INFO("Initialized Amazon S3 storage at '$path' with request timeout = $request_timeout s, read attempts = " . AMAZON_S3_READ_ATTEMPTS . ", write attempts = " . AMAZON_S3_WRITE_ATTEMPTS);
 }
 
@@ -146,8 +146,8 @@ sub _path_for_filename($$)
         LOGDIE("Filename is empty.");
     }
 
-    if ($self->_config_folder_name ne '' and $self->_config_folder_name ne '/') {
-        return $self->_config_folder_name . $filename;
+    if ($self->_config_directory_name ne '' and $self->_config_directory_name ne '/') {
+        return $self->_config_directory_name . $filename;
     } else {
         return $filename;
     }
@@ -388,7 +388,7 @@ sub list_iterator($;$)
     eval {
         $iterator = Storage::Iterator::AmazonS3->new(s3 => $self->_s3,
                                                      bucket_name => $self->_config_bucket_name,
-                                                     prefix => $self->_config_folder_name,
+                                                     prefix => $self->_config_directory_name,
                                                      offset => $filename_offset,
                                                      read_attempts => AMAZON_S3_READ_ATTEMPTS);
     };

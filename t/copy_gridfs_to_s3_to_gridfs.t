@@ -87,9 +87,9 @@ foreach my $key ( @{ $response->{keys} } ) {
 		filename => $key->{key},
 		contents => $file->{value}
 	};
-	if ($config->{amazon_s3}->{folder_name}) {
-		# Strip folder prefix
-		$file->{filename} =~ s/^$config->{amazon_s3}->{folder_name}\///;
+	if ($config->{amazon_s3}->{directory_name}) {
+		# Strip directory prefix
+		$file->{filename} =~ s/^$config->{amazon_s3}->{directory_name}\///;
 	}
 	push (@files_restored_from_s3, $file);
 }

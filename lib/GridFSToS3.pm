@@ -72,7 +72,7 @@ sub _s3_handler_for_pid($$)
             access_key_id => $config->{amazon_s3}->{access_key_id},
             secret_access_key => $config->{amazon_s3}->{secret_access_key},
             bucket_name => $config->{amazon_s3}->{bucket_name},
-            folder_name => $config->{amazon_s3}->{folder_name} || '',
+            directory_name => $config->{amazon_s3}->{directory_name} || '',
             timeout => int($_config->{amazon_s3}->{timeout}) // 60,
             use_ssl => $_config->{amazon_s3}->{use_ssl} // 0,
             head_before_putting => $_config->{amazon_s3}->{head_before}->{put} // 0,

@@ -40,9 +40,9 @@ amazon_s3:
     access_key_id           : "AKIAIOSFODNN7EXAMPLE"
     secret_access_key       : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
     bucket_name             : "backup-gridfs"
-    # If set, files in S3 will be saved as "<downloads_folder_name>/<filename>"
+    # If set, files in S3 will be saved as "<downloads_directory_name>/<filename>"
     # instead of just "<filename>"; may be empty
-    folder_name             : "backup"
+    directory_name          : "backup"
     # will try 3 times within 19 seconds:
     timeout                 : 60
     # Use SSL (1/0)?

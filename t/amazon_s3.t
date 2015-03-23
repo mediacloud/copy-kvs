@@ -25,18 +25,18 @@ my $native_s3 = Net::Amazon::S3->new(
 my $test_bucket = $native_s3->add_bucket( { bucket => $test_bucket_name } )
 	or die $native_s3->err . ": " . $native_s3->errstr;
 
-# Instances with / without folder name
-my $s3_with_folder = Storage::Handler::AmazonS3->new(
+# Instances with / without directory name
+my $s3_with_directory = Storage::Handler::AmazonS3->new(
     access_key_id => $config->{amazon_s3}->{access_key_id},
     secret_access_key => $config->{amazon_s3}->{secret_access_key},
     bucket_name => $test_bucket_name,
-    folder_name => 'files_from_gridfs'
+    directory_name => 'files_from_gridfs'
 );
-my $s3_without_folder = Storage::Handler::AmazonS3->new(
+my $s3_without_directory = Storage::Handler::AmazonS3->new(
     access_key_id => $config->{amazon_s3}->{access_key_id},
     secret_access_key => $config->{amazon_s3}->{secret_access_key},
     bucket_name => $test_bucket_name,
-    folder_name => ''
+    directory_name => ''
 );
 
 
@@ -85,8 +85,8 @@ sub run_tests($$)
 }
 
 # Run tests for both buckets
-run_tests($s3_with_folder, 'with folder');
-run_tests($s3_without_folder, 'without folder');
+run_tests($s3_with_directory, 'with directory');
+run_tests($s3_without_directory, 'without directory');
 
 # Delete temporary bucket
 $test_bucket->delete_bucket or die $native_s3->err . ": " . $native_s3->errstr;

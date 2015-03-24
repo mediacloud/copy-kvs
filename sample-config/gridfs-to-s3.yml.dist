@@ -11,56 +11,55 @@
 # prevent multiple instances of the script from doing the same thing.
 lock_file        : "gridfs-to-s3.lock"
 
-# File with the last filename copied from GridFS to S3
-#
-# The script will save the last filename copied from GridFS to S3. That way you
-# can resume the copying later (or when you add more files to GridFS).
-file_with_last_filename_copied_from_gridfs_to_s3   : "copy-gridfs-to-s3.last"
-
-# The script will save the last filename copied from S3 to GridFS. That way you
-# can resume the copying later (or when you add more files to S3).
-file_with_last_filename_copied_from_s3_to_gridfs    : "copy-s3-to-gridfs.last"
-
 # How many worker threads to spawn
 worker_threads  : 32
 
 # How many jobs to add to the job pool at once
 job_chunk_size  : 512
 
-# MongoDB GridFS connection settings
-mongodb_gridfs:
-    host        : "localhost" 
-    port        : "27017" 
-    database    : "my_files"
-    # no timeout by default (wait forever because of the "recv timed out" errors)
-    timeout     : -1
+# Various means to copy objects to / from
+connectors:
 
-# Amazon S3 connection settings
-amazon_s3:
-    access_key_id           : "AKIAIOSFODNN7EXAMPLE"
-    secret_access_key       : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
-    bucket_name             : "backup-gridfs"
-    # If set, files in S3 will be saved as "<downloads_directory_name>/<filename>"
-    # instead of just "<filename>"; may be empty
-    directory_name          : "backup"
-    # will try 3 times within 19 seconds:
-    timeout                 : 60
-    # Use SSL (1/0)?
-    use_ssl                 : 0
-    # Whether to check if the file exists (by sending a HEAD request) before doing
-    # anything else.
-    # Setting to "yes" will increase both the script verbosity (useful for
-    # debugging and paranoid types) and Amazon S3 costs (because HEAD requests
-    # cost too!)
-    head_before:
-        # HEAD before PUTting a file (1/0)
-        put                 : 0
-        # HEAD before GETting a file (1/0)
-        get                 : 0
-        # HEAD before DELETing a file (1/0)
-        delete              : 0
-    # Overwrite the file if it already exists (1/0)?
-    # (if you set it to 0, "head_before->put" will be enabled because in order
-    # to ensure that the file doesn't get overwritten, the script has to check
-    # whether or not the file exists first)
-    overwrite               : 1
+    # MongoDB GridFS connection settings
+    "mongodb_gridfs":
+        type        : "GridFS"
+        host        : "localhost" 
+        port        : "27017" 
+        database    : "my_files"
+        # no timeout by default (wait forever because of the "recv timed out" errors)
+        timeout     : -1
+        # File in which the last copied filename from GridFS is stored
+        last_copied_file    : "copy-kvs-gridfs.last"
+
+    # Amazon S3 connection settings
+    "amazon_s3":
+        type                    : "AmazonS3"
+        access_key_id           : "AKIAIOSFODNN7EXAMPLE"
+        secret_access_key       : "wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY"
+        bucket_name             : "backup-gridfs"
+        # If set, files in S3 will be saved as "<downloads_directory_name>/<filename>"
+        # instead of just "<filename>"; may be empty
+        directory_name          : "backup"
+        # will try 3 times within 19 seconds:
+        timeout                 : 60
+        # Use SSL (1/0)?
+        use_ssl                 : 0
+        # Whether to check if the file exists (by sending a HEAD request) before doing
+        # anything else.
+        # Setting to "yes" will increase both the script verbosity (useful for
+        # debugging and paranoid types) and Amazon S3 costs (because HEAD requests
+        # cost too!)
+        head_before:
+            # HEAD before PUTting a file (1/0)
+            put                 : 0
+            # HEAD before GETting a file (1/0)
+            get                 : 0
+            # HEAD before DELETing a file (1/0)
+            delete              : 0
+        # Overwrite the file if it already exists (1/0)?
+        # (if you set it to 0, "head_before->put" will be enabled because in order
+        # to ensure that the file doesn't get overwritten, the script has to check
+        # whether or not the file exists first)
+        overwrite               : 1
+        # File in which the last copied filename from S3 is stored
+        last_copied_file    : "copy-kvs-s3.last"

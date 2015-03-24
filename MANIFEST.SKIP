@@ -1,0 +1,14 @@
+# The "last copied file"
+.+?\.last
+
+# Configuration
+sample-config/.+?\.yml$
+
+# Perl module files
+blib
+\.DS_Store
+\.git
+^Makefile$
+Makefile\.old
+MANIFEST\.bak
+MYMETA

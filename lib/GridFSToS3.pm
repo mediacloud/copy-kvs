@@ -14,21 +14,6 @@ use Storage::Handler::GridFS;
 use Parallel::Fork::BossWorkerAsync;
 use List::Util qw(max);
 
-# Global variable so it can be used by:
-# * _sigint() -- called independently from main()
-# * _log_last_copied_file_from_gridfs_to_s3() -- might be called by _sigint()
-# * _log_last_copied_file_from_s3_to_gridfs() -- might be called by _sigint()
-my $_config;
-
-# Global variable so it can be used by:
-# * _log_last_copied_file_from_gridfs_to_s3() -- might be called by _sigint()
-# * _log_last_copied_file_from_s3_to_gridfs() -- might be called by _sigint()
-my $_last_copied_filename;
-
-# PID of the main process (only the "boss" process will have the
-# right to write down the last copied filename)
-my $_main_process_pid = 0;
-
 # GridFS handlers (PID => $handler)
 my %_gridfs_handlers;
 
@@ -49,7 +34,7 @@ sub _gridfs_handler_for_pid($$)
             host => $config->{mongodb_gridfs}->{host} || 'localhost',
             port => $config->{mongodb_gridfs}->{port} || 27017,
             database => $config->{mongodb_gridfs}->{database},
-            timeout => int($_config->{mongodb_gridfs}->{timeout}) || -1
+            timeout => int($config->{mongodb_gridfs}->{timeout}) || -1
         );
         unless ($_gridfs_handlers{$pid}) {
             LOGDIE("Unable to initialize GridFS handler for PID $pid");
@@ -73,12 +58,12 @@ sub _s3_handler_for_pid($$)
             secret_access_key => $config->{amazon_s3}->{secret_access_key},
             bucket_name => $config->{amazon_s3}->{bucket_name},
             directory_name => $config->{amazon_s3}->{directory_name} || '',
-            timeout => int($_config->{amazon_s3}->{timeout}) // 60,
-            use_ssl => $_config->{amazon_s3}->{use_ssl} // 0,
-            head_before_putting => $_config->{amazon_s3}->{head_before}->{put} // 0,
-            head_before_getting => $_config->{amazon_s3}->{head_before}->{get} // 0,
-            head_before_deleting => $_config->{amazon_s3}->{head_before}->{delete} // 0,
-            overwrite => $_config->{amazon_s3}->{overwrite} // 1,
+            timeout => int($config->{amazon_s3}->{timeout}) // 60,
+            use_ssl => $config->{amazon_s3}->{use_ssl} // 0,
+            head_before_putting => $config->{amazon_s3}->{head_before}->{put} // 0,
+            head_before_getting => $config->{amazon_s3}->{head_before}->{get} // 0,
+            head_before_deleting => $config->{amazon_s3}->{head_before}->{delete} // 0,
+            overwrite => $config->{amazon_s3}->{overwrite} // 1,
         );
         unless ($_s3_handlers{$pid}) {
             LOGDIE("Unable to initialize S3 handler for PID $pid");
@@ -111,42 +96,26 @@ sub _unlink_lock_file($)
     unlink $config->{lock_file};
 }
 
-sub _log_last_copied_file_from_gridfs_to_s3
+sub _log_last_copied_file_from_gridfs_to_s3($$)
 {
-    if ($$ == $_main_process_pid)
-    {
-        if (defined $_last_copied_filename) {
-            open LAST, ">$_config->{file_with_last_filename_copied_from_gridfs_to_s3}";
-            print LAST $_last_copied_filename;
-            close LAST;
-        }
+    my ($config, $last_copied_filename) = @_;
+
+    if (defined $last_copied_filename) {
+        open LAST, ">$config->{file_with_last_filename_copied_from_gridfs_to_s3}";
+        print LAST $last_copied_filename;
+        close LAST;
     }
 }
 
-sub _log_last_copied_file_from_s3_to_gridfs
+sub _log_last_copied_file_from_s3_to_gridfs($$)
 {
-    if ($$ == $_main_process_pid)
-    {
-        if (defined $_last_copied_filename) {
-            open LAST, ">$_config->{file_with_last_filename_copied_from_s3_to_gridfs}";
-            print LAST $_last_copied_filename;
-            close LAST;
-        }
+    my ($config, $last_copied_filename) = @_;
+
+    if (defined $last_copied_filename) {
+        open LAST, ">$config->{file_with_last_filename_copied_from_s3_to_gridfs}";
+        print LAST $last_copied_filename;
+        close LAST;
     }
-}
-
-sub _sigint_from_gridfs_to_s3
-{
-    _log_last_copied_file_from_gridfs_to_s3();
-    unlink $_config->{lock_file};
-    exit( 1 );
-}
-
-sub _sigint_from_s3_to_gridfs
-{
-    _log_last_copied_file_from_s3_to_gridfs();
-    unlink $_config->{lock_file};
-    exit( 1 );
 }
 
 sub _upload_file_to_s3
@@ -203,22 +172,15 @@ sub _download_file_to_gridfs
 
 sub copy_gridfs_to_s3($)
 {
-	my ($config) = @_;
-	$_config = $config;
-	$_last_copied_filename = undef;
-
-    $_main_process_pid = $$;
+    my ($config) = @_;
 
     # Create lock file
-    _create_lock_file($_config);
-
-    # Catch SIGINTs to clean up the lock file and cleanly write the last copied file
-    $SIG{ 'INT' } = 'GridFSToS3::_sigint_from_gridfs_to_s3';
+    _create_lock_file($config);
 
     # Read last copied filename
     my $offset_filename;
-    if (-e $_config->{file_with_last_filename_copied_from_gridfs_to_s3}) {
-        open LAST, "<$_config->{file_with_last_filename_copied_from_gridfs_to_s3}";
+    if (-e $config->{file_with_last_filename_copied_from_gridfs_to_s3}) {
+        open LAST, "<$config->{file_with_last_filename_copied_from_gridfs_to_s3}";
         $offset_filename = <LAST>;
         chomp $offset_filename;
         close LAST;
@@ -226,10 +188,10 @@ sub copy_gridfs_to_s3($)
         INFO("Will resume from '$offset_filename'.");
     }
 
-    my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
-    my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
-    my $gridfs_timeout = int($_config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
-    my $s3_timeout = int($_config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
+    my $worker_threads = $config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
+    my $job_chunk_size = $config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+    my $gridfs_timeout = int($config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
+    my $s3_timeout = int($config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
@@ -239,7 +201,7 @@ sub copy_gridfs_to_s3($)
     );
 
     # Copy
-    my $gridfs = _gridfs_handler_for_pid($$, $_config);
+    my $gridfs = _gridfs_handler_for_pid($$, $config);
     my $list_iterator = $gridfs->list_iterator($offset_filename);
     my $have_files_left = 1;
     while ($have_files_left)
@@ -254,12 +216,12 @@ sub copy_gridfs_to_s3($)
                 $filename = $f;
             } else {
                 # No filenames left to copy, leave $filename at the last filename copied
-                # so that _last_copied_filename() can write that down
+                # so that _log_last_copied_file_from_gridfs_to_s3() can write that down
                 $have_files_left = 0;
                 last;
             }
             DEBUG("Enqueueing filename '$filename'");
-            $bw->add_work({filename => $filename, config => $_config});
+            $bw->add_work({filename => $filename, config => $config});
         }
 
         while ($bw->pending()) {
@@ -273,15 +235,14 @@ sub copy_gridfs_to_s3($)
 
         # Store the last filename from the chunk as the last copied
         if ($filename) {
-            $_last_copied_filename = $filename;
-            _log_last_copied_file_from_gridfs_to_s3();
+            _log_last_copied_file_from_gridfs_to_s3( $config, $filename );
         }
     }
 
     $bw->shut_down();
 
     # Remove lock file
-    _unlink_lock_file($_config);
+    _unlink_lock_file($config);
 
     INFO("Done.");
 
@@ -290,22 +251,15 @@ sub copy_gridfs_to_s3($)
 
 sub copy_s3_to_gridfs($)
 {
-	my ($config) = @_;
-	$_config = $config;
-	$_last_copied_filename = undef;
-
-    $_main_process_pid = $$;
+    my ($config) = @_;
 
     # Create lock file
-    _create_lock_file($_config);
-
-    # Catch SIGINTs to clean up the lock file and cleanly write the last copied file
-    $SIG{ 'INT' } = 'GridFSToS3::_sigint_from_s3_to_gridfs';
+    _create_lock_file($config);
 
     # Read last copied filename
     my $offset_filename;
-    if (-e $_config->{file_with_last_filename_copied_from_s3_to_gridfs}) {
-        open LAST, "<$_config->{file_with_last_filename_copied_from_s3_to_gridfs}";
+    if (-e $config->{file_with_last_filename_copied_from_s3_to_gridfs}) {
+        open LAST, "<$config->{file_with_last_filename_copied_from_s3_to_gridfs}";
         $offset_filename = <LAST>;
         chomp $offset_filename;
         close LAST;
@@ -313,10 +267,10 @@ sub copy_s3_to_gridfs($)
         INFO("Will resume from '$offset_filename'.");
     }
 
-    my $worker_threads = $_config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
-    my $job_chunk_size = $_config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
-    my $gridfs_timeout = int($_config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
-    my $s3_timeout = int($_config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
+    my $worker_threads = $config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
+    my $job_chunk_size = $config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+    my $gridfs_timeout = int($config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
+    my $s3_timeout = int($config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
@@ -326,7 +280,7 @@ sub copy_s3_to_gridfs($)
     );
 
     # Copy
-    my $amazons3 = _s3_handler_for_pid($$, $_config);
+    my $amazons3 = _s3_handler_for_pid($$, $config);
     my $list_iterator = $amazons3->list_iterator($offset_filename);
     my $have_files_left = 1;
     while ($have_files_left)
@@ -341,12 +295,12 @@ sub copy_s3_to_gridfs($)
                 $filename = $f;
             } else {
                 # No filenames left to copy, leave $filename at the last filename copied
-                # so that _last_copied_filename() can write that down
+                # so that _log_last_copied_file_from_s3_to_gridfs() can write that down
                 $have_files_left = 0;
                 last;
             }
             DEBUG("Enqueueing filename '$filename'");
-            $bw->add_work({filename => $filename, config => $_config});
+            $bw->add_work({filename => $filename, config => $config});
         }
 
         while ($bw->pending()) {
@@ -360,15 +314,14 @@ sub copy_s3_to_gridfs($)
 
         # Store the last filename from the chunk as the last copied
         if ($filename) {
-            $_last_copied_filename = $filename;
-            _log_last_copied_file_from_s3_to_gridfs();
+            _log_last_copied_file_from_s3_to_gridfs($config, $filename);
         }
     }
 
     $bw->shut_down();
 
     # Remove lock file
-    _unlink_lock_file($_config);
+    _unlink_lock_file($config);
 
     INFO("Done.");
 

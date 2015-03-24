@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Wrapper around "copy-s3-to-gridfs.pl" script
+# Wrapper around "copy-kvs.pl" script (copies from S3 to GridFS)
 #
 # Writes script's output (both STDERR and STDOUT) to external log.
 #
@@ -18,9 +18,11 @@ PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$PWD/copy_or_tail_log.inc.sh"
 
 LOG_FILE="$1"
-COPY_SCRIPT="$PWD/../copy-s3-to-gridfs.pl"
+COPY_SCRIPT="$PWD/../copy-kvs.pl"
 CONFIG_FILE="$PWD/../gridfs-to-s3.yml"
+FROM_CONNECTOR="amazon_s3"
+TO_CONNECTOR="mongodb_gridfs"
 
-copy_or_tail_log "$LOG_FILE" "$COPY_SCRIPT" "$CONFIG_FILE"
+copy_or_tail_log "$LOG_FILE" "$COPY_SCRIPT" "$CONFIG_FILE" "$FROM_CONNECTOR" "$TO_CONNECTOR"
 
 exit 0

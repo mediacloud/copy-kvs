@@ -13,6 +13,8 @@ function copy_or_tail_log {
     local LOG_FILE="$1"
     local COPY_SCRIPT="$2"
     local CONFIG_FILE="$3"
+    local FROM_CONNECTOR="$4"
+    local TO_CONNECTOR="$5"
 
     touch "$LOG_FILE" || {
         echo "Log file $LOG_FILE is not writable."
@@ -42,7 +44,7 @@ function copy_or_tail_log {
 
     PWD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-    $PERL_PATH "$COPY_SCRIPT" "$CONFIG_FILE" >> "$LOG_FILE" 2>&1 || {
+    $PERL_PATH "$COPY_SCRIPT" "$CONFIG_FILE" "$FROM_CONNECTOR" "$TO_CONNECTOR" >> "$LOG_FILE" 2>&1 || {
 
         echo "'$COPY_SCRIPT' run on ${LOG_TIMESTAMP} has failed."
         echo

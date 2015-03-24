@@ -10,6 +10,7 @@ WriteMakefile(
       ? ('LICENSE'=> 'agpl')
       : ()),
     PREREQ_PM         => {
+        'File::Slurp' => 9999.19,
         'FindBin' => 0,
         'Log::Log4perl' => 1.43,
         'MongoDB' => '0.704.1.0',

@@ -12,6 +12,7 @@ use Storage::Handler::AmazonS3;
 use Storage::Handler::GridFS;
 
 use Parallel::Fork::BossWorkerAsync;
+use File::Slurp;
 use List::Util qw(max);
 
 # GridFS handlers (PID => $handler)

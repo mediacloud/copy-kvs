@@ -6,7 +6,11 @@ use warnings;
 our $VERSION = '0.01';
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+Log::Log4perl->easy_init({
+    level => $DEBUG,
+    utf8 => 1,
+    layout => "%d{ISO8601} [%P]: %m%n"
+});
 
 use Storage::Handler::AmazonS3;
 use Storage::Handler::GridFS;
@@ -268,10 +272,14 @@ sub copy_s3_to_gridfs($)
         INFO("Will resume from '$offset_filename'.");
     }
 
-    my $worker_threads = $config->{worker_threads} or LOGDIE("Invalid number of worker threads ('worker_threads').");
-    my $job_chunk_size = $config->{job_chunk_size} or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
-    my $gridfs_timeout = int($config->{mongodb_gridfs}->{timeout}) or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
-    my $s3_timeout = int($config->{amazon_s3}->{timeout}) or LOGDIE("Invalid S3 timeout (must be positive integer");
+    my $worker_threads = $config->{worker_threads}
+        or LOGDIE("Invalid number of worker threads ('worker_threads').");
+    my $job_chunk_size = $config->{job_chunk_size}
+        or LOGDIE("Invalid number of jobs to enqueue at once ('job_chunk_size').");
+    my $gridfs_timeout = int($config->{mongodb_gridfs}->{timeout})
+        or LOGDIE("Invalid GridFS timeout (must be positive integer or -1 for no timeout");
+    my $s3_timeout = int($config->{amazon_s3}->{timeout})
+        or LOGDIE("Invalid S3 timeout (must be positive integer");
 
     # Initialize worker manager
     my $bw = Parallel::Fork::BossWorkerAsync->new(
@@ -333,7 +341,8 @@ sub copy_s3_to_gridfs($)
 
 =head1 NAME
 
-GridFSToS3 - Copy objects between various key-value stores (MongoDB GridFS, Amazon S3, PostgreSQL BLOB tables)
+GridFSToS3 - Copy objects between various key-value stores (MongoDB GridFS,
+Amazon S3, PostgreSQL BLOB tables)
 
 =head1 SYNOPSIS
 
@@ -341,7 +350,8 @@ GridFSToS3 - Copy objects between various key-value stores (MongoDB GridFS, Amaz
 
 =head1 DESCRIPTION
 
-Copy objects between various key-value stores (MongoDB GridFS, Amazon S3, PostgreSQL BLOB tables).
+Copy objects between various key-value stores (MongoDB GridFS, Amazon S3,
+PostgreSQL BLOB tables).
 
 =head2 EXPORT
 

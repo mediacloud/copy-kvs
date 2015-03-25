@@ -25,6 +25,12 @@ This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to
 * [Net::Amazon::S3](http://search.cpan.org/dist/Net-Amazon-S3/)
 * [MongoDB](http://search.cpan.org/dist/MongoDB/)
 
+## Code formatting
+
+Install `perltidy` Git hook to automatically fix script formatting:
+
+    cpanm --installdeps .
+    githook-perltidy install
 
 ## Implementation details
 

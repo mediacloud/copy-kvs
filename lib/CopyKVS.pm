@@ -16,6 +16,7 @@ Log::Log4perl->easy_init(
 
 use CopyKVS::Handler::AmazonS3;
 use CopyKVS::Handler::GridFS;
+use CopyKVS::Handler::PostgresBLOB;
 
 use Parallel::Fork::BossWorkerAsync;
 use File::Slurp;

@@ -26,6 +26,8 @@ install:
 script:
     - perl Makefile.PL
     - make
-    - cover -test -report coveralls
+    - cover -test
     - make install
     - make clean
+after_success:
+    - cover -report coveralls

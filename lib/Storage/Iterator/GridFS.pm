@@ -9,7 +9,7 @@ use Moose;
 with 'Storage::Iterator';
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
 
 # Number of filenames to cache into $self->_filenames
 use constant GRIDFS_CHUNK_SIZE => 1000;
@@ -18,29 +18,31 @@ use constant GRIDFS_CHUNK_SIZE => 1000;
 use Storage::Handler::GridFS;
 
 has '_fs_files_collection' => ( is => 'rw' );
-has '_offset' => ( is => 'rw' );
-has '_read_attempts' => ( is => 'rw' );
+has '_offset'              => ( is => 'rw' );
+has '_read_attempts'       => ( is => 'rw' );
 
 has '_end_of_data' => ( is => 'rw' );
 has '_filenames' => ( is => 'rw', default => sub { [] } );
 
 # Constructor
-sub BUILD {
+sub BUILD
+{
     my $self = shift;
     my $args = shift;
 
-    $self->_fs_files_collection($args->{fs_files_collection}) or LOGDIE("MongoDB fs.files collection is undefined.");
-    $self->_offset($args->{offset} // '');   # No offset (list from beginning)
-    $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
+    $self->_fs_files_collection( $args->{ fs_files_collection } ) or LOGDIE( "MongoDB fs.files collection is undefined." );
+    $self->_offset( $args->{ offset } // '' );    # No offset (list from beginning)
+    $self->_read_attempts( $args->{ read_attempts } ) or LOGDIE( "Read attempts count is not defined." );
 }
 
 sub next($)
 {
-    my ($self) = @_;
+    my ( $self ) = @_;
 
-    if (scalar (@{$self->_filenames}) == 0)
+    if ( scalar( @{ $self->_filenames } ) == 0 )
     {
-        if ($self->_end_of_data) {
+        if ( $self->_end_of_data )
+        {
             # Last fetched chunk was the end of the list
             return undef;
         }
@@ -52,7 +54,7 @@ sub next($)
         {
             if ( $retry > 0 )
             {
-                WARN("Retrying ($retry)...");
+                WARN( "Retrying ($retry)..." );
             }
 
             eval {
@@ -60,33 +62,36 @@ sub next($)
                 # Fetch a new chunk
                 # (see README.mdown for the explanation of why we don't use MongoDB::Cursor as
                 # an iterator itself and instead wrap the creation and usage into a single eval{};)
-                my $find_query = { };
-                if ($self->_offset ne '') {
+                my $find_query = {};
+                if ( $self->_offset ne '' )
+                {
                     # Start from the filename offset
-                    my $offset_objectid       = $self->_fs_files_collection->find_one({ filename => $self->_offset }, {_id => 1});
-                    unless ($offset_objectid) {
-                        LOGDIE("Offset file '" . $self->_offset . "' was not found.");
+                    my $offset_objectid =
+                      $self->_fs_files_collection->find_one( { filename => $self->_offset }, { _id => 1 } );
+                    unless ( $offset_objectid )
+                    {
+                        LOGDIE( "Offset file '" . $self->_offset . "' was not found." );
                     }
-                    $offset_objectid = $offset_objectid->{_id}->{value};
-                    unless (Storage::Handler::GridFS::valid_objectid($offset_objectid)) {
-                        LOGDIE("Offset file's '" . $self->_offset . "' ObjectId '$offset_objectid' is not valid.");
+                    $offset_objectid = $offset_objectid->{ _id }->{ value };
+                    unless ( Storage::Handler::GridFS::valid_objectid( $offset_objectid ) )
+                    {
+                        LOGDIE( "Offset file's '" . $self->_offset . "' ObjectId '$offset_objectid' is not valid." );
                     }
 
-                    $find_query = { _id => { '$gt' => MongoDB::OID->new(value => $offset_objectid) } };
-                    DEBUG("Will resume from ObjectId '$offset_objectid'");
+                    $find_query = { _id => { '$gt' => MongoDB::OID->new( value => $offset_objectid ) } };
+                    DEBUG( "Will resume from ObjectId '$offset_objectid'" );
 
-                } else {
-                    DEBUG("Will resume from the beginning");
+                }
+                else
+                {
+                    DEBUG( "Will resume from the beginning" );
                 }
 
                 # If the cursor would fail (die) here, it will be recreated in
                 # the next attempt to fetch a list of files, so this will likely
                 # overcome the "skip through gazillion of files" bug
-                my $cursor = $self->_fs_files_collection
-                                  ->query( $find_query )
-                                  ->sort({ _id => 1})
-                                  ->fields({ _id => 1, filename => 1 })
-                                  ->limit(GRIDFS_CHUNK_SIZE);
+                my $cursor = $self->_fs_files_collection->query( $find_query )->sort( { _id => 1 } )
+                  ->fields( { _id => 1, filename => 1 } )->limit( GRIDFS_CHUNK_SIZE );
                 $cursor->immortal();
                 @objects = $cursor->all;
 
@@ -95,7 +100,7 @@ sub next($)
 
             if ( $@ )
             {
-                WARN("Attempt to read next the filename didn't succeed because: $@");
+                WARN( "Attempt to read next the filename didn't succeed because: $@" );
             }
             else
             {
@@ -105,33 +110,38 @@ sub next($)
 
         unless ( $attempt_to_read_succeeded )
         {
-            LOGDIE("Unable to read the next filename from GridFS after " . $self->_read_attempts . " retries.");
+            LOGDIE( "Unable to read the next filename from GridFS after " . $self->_read_attempts . " retries." );
         }
 
         # Store the chunk of filenames locally
-        for my $object (@objects) {
+        for my $object ( @objects )
+        {
 
-            my $object_objectid = $object->{_id}->{value};
-            my $object_filename = $object->{filename};
+            my $object_objectid = $object->{ _id }->{ value };
+            my $object_filename = $object->{ filename };
 
-            unless (Storage::Handler::GridFS::valid_objectid($object_objectid)) {
-                LOGDIE("File's '$object_filename' ObjectId '$object_objectid' is not valid.");
+            unless ( Storage::Handler::GridFS::valid_objectid( $object_objectid ) )
+            {
+                LOGDIE( "File's '$object_filename' ObjectId '$object_objectid' is not valid." );
             }
 
-            push (@{$self->_filenames}, $object_filename);
+            push( @{ $self->_filenames }, $object_filename );
         }
 
         # Write down the new offset
-        if (scalar @objects) {
+        if ( scalar @objects )
+        {
             # Use the last filename
-            $self->_offset($self->_filenames->[-1]);
-        } else {
+            $self->_offset( $self->_filenames->[ -1 ] );
+        }
+        else
+        {
             # No more objects to be fetched
-            $self->_end_of_data(1);
+            $self->_end_of_data( 1 );
         }
     }
 
-    return shift (@{$self->_filenames});
+    return shift( @{ $self->_filenames } );
 }
 
 no Moose;    # gets rid of scaffolding

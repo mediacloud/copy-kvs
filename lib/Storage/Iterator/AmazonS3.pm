@@ -9,36 +9,37 @@ use Moose;
 with 'Storage::Iterator';
 
 use Log::Log4perl qw(:easy);
-Log::Log4perl->easy_init({level => $DEBUG, utf8=>1, layout => "%d{ISO8601} [%P]: %m%n"});
+Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
 
 # Use old ("legacy") interface because the new one (Net::Amazon::S3::Client::Bucket)
 # doesn't seem to support manual markers
 use Net::Amazon::S3 0.59;
 
-has '_s3' => ( is => 'rw' );
-has '_bucket_name' => ( is => 'rw' );
-has '_prefix' => ( is => 'rw' );
-has '_offset' => ( is => 'rw' );
+has '_s3'            => ( is => 'rw' );
+has '_bucket_name'   => ( is => 'rw' );
+has '_prefix'        => ( is => 'rw' );
+has '_offset'        => ( is => 'rw' );
 has '_read_attempts' => ( is => 'rw' );
 
 has '_end_of_data' => ( is => 'rw' );
 has '_filenames' => ( is => 'rw', default => sub { [] } );
 
 # Constructor
-sub BUILD {
+sub BUILD
+{
     my $self = shift;
     my $args = shift;
 
-    $self->_s3($args->{s3}) or LOGDIE("Net::Amazon::S3 object is undefined.");
-    $self->_bucket_name($args->{bucket_name}) or LOGDIE("Bucket name is undefined.");
-    $self->_prefix($args->{prefix} // '');   # No prefix (directory)
-    $self->_offset($args->{offset} // '');   # No offset (list from beginning)
-    $self->_read_attempts($args->{read_attempts}) or LOGDIE("Read attempts count is not defined.");
+    $self->_s3( $args->{ s3 } )                   or LOGDIE( "Net::Amazon::S3 object is undefined." );
+    $self->_bucket_name( $args->{ bucket_name } ) or LOGDIE( "Bucket name is undefined." );
+    $self->_prefix( $args->{ prefix } // '' );    # No prefix (directory)
+    $self->_offset( $args->{ offset } // '' );    # No offset (list from beginning)
+    $self->_read_attempts( $args->{ read_attempts } ) or LOGDIE( "Read attempts count is not defined." );
 }
 
 sub _strip_prefix($$)
 {
-    my ($string, $prefix) = @_;
+    my ( $string, $prefix ) = @_;
 
     $string =~ s/^$prefix//gm;
     return $string;
@@ -46,11 +47,12 @@ sub _strip_prefix($$)
 
 sub next($)
 {
-    my ($self) = @_;
+    my ( $self ) = @_;
 
-    if (scalar (@{$self->_filenames}) == 0)
+    if ( scalar( @{ $self->_filenames } ) == 0 )
     {
-        if ($self->_end_of_data) {
+        if ( $self->_end_of_data )
+        {
             # Last fetched chunk was the end of the list
             return undef;
         }
@@ -62,25 +64,27 @@ sub next($)
         {
             if ( $retry > 0 )
             {
-                WARN("Retrying ($retry)...");
+                WARN( "Retrying ($retry)..." );
             }
 
             eval {
 
                 # Fetch a new chunk
-                DEBUG("Will fetch a new chunk of filenames with offset: " . $self->_offset);
-                $list = $self->_s3->list_bucket({
-                    bucket => $self->_bucket_name,
-                    prefix => $self->_prefix,
-                    marker => $self->_prefix . $self->_offset
-                }) or LOGDIE("Unable to fetch the next list of files.");
+                DEBUG( "Will fetch a new chunk of filenames with offset: " . $self->_offset );
+                $list = $self->_s3->list_bucket(
+                    {
+                        bucket => $self->_bucket_name,
+                        prefix => $self->_prefix,
+                        marker => $self->_prefix . $self->_offset
+                    }
+                ) or LOGDIE( "Unable to fetch the next list of files." );
 
                 $attempt_to_read_succeeded = 1;
             };
 
             if ( $@ )
             {
-                WARN("Attempt to read next the filename didn't succeed because: $@");
+                WARN( "Attempt to read next the filename didn't succeed because: $@" );
             }
             else
             {
@@ -90,28 +94,32 @@ sub next($)
 
         unless ( $attempt_to_read_succeeded )
         {
-            LOGDIE("Unable to read the next filename from S3 after " . $self->_read_attempts . " retries.");
+            LOGDIE( "Unable to read the next filename from S3 after " . $self->_read_attempts . " retries." );
         }
 
         # Store the chunk of filenames locally
-        for my $filename (@{$list->{keys}}) {
-            $filename = _strip_prefix($filename->{key}, $self->_prefix) or LOGDIE("Empty filename.");
-            push (@{$self->_filenames}, $filename);
+        for my $filename ( @{ $list->{ keys } } )
+        {
+            $filename = _strip_prefix( $filename->{ key }, $self->_prefix ) or LOGDIE( "Empty filename." );
+            push( @{ $self->_filenames }, $filename );
         }
 
         # Write down the new offset
-        $self->_offset(_strip_prefix($list->{next_marker}, $self->_prefix));
-        if ($list->{is_truncated}) {
+        $self->_offset( _strip_prefix( $list->{ next_marker }, $self->_prefix ) );
+        if ( $list->{ is_truncated } )
+        {
             # More files left to fetch -- use the last filename as a marker
-            $self->_offset($self->_filenames->[-1]);
-            DEBUG("Updated to offset: " . $self->_offset);
-        } else {
+            $self->_offset( $self->_filenames->[ -1 ] );
+            DEBUG( "Updated to offset: " . $self->_offset );
+        }
+        else
+        {
             # No more files (as the list is not truncated)
-            $self->_end_of_data(1);
+            $self->_end_of_data( 1 );
         }
     }
 
-    return shift (@{$self->_filenames});
+    return shift( @{ $self->_filenames } );
 }
 
 no Moose;    # gets rid of scaffolding

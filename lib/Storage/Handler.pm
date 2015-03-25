@@ -10,7 +10,6 @@ use warnings;
 use Moose::Role;
 use Storage::Iterator;
 
-
 # Fetch file
 # returns file contents on success; dies on error
 requires 'get';

@@ -9,7 +9,6 @@ use warnings;
 
 use Moose::Role;
 
-
 # Fetch next filename
 # returns next filename if there's something to fetch, undef if there isn't; dies on error
 requires 'next';

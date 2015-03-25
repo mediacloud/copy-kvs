@@ -1,0 +1,25 @@
+language: perl
+perl:
+    - "5.16"
+    - "5.18"
+    - "5.20"
+addons:
+    hosts:
+        - copy-kvs.local
+services:
+    - mongodb
+env:
+    global:
+        # S3 credentials for testing
+        - secure: "Hh6J8E1HiIMrCUVpot3g5DpA0e2LZPCCb4jKJ4ZDuRI3UDqxL4UILfRvuPfgNckXwyH4z8OBOkrwnhgZ9fKyIwIRiW7uz1PqsVeSR9m6fxnhko2v7UiAw4aH+A4vPQPsbL9jnn1DJsyqE062ZreNwRWRsWAOqTNZnfbZnn3beJg="
+        - secure: "SCI+uOWDM7APHvJFdbf02TmrurzHuhxOnLf+iFB4QSH0+j2Lmguf5K4UBYv0XQv6t60dLcS1lbtC7uhYXehyNkWa3ONdLstDM3KFk2/23YfFM1+xI3lxUXAxtMKelNd6uixAWl9Qom6XUDHC9tUS8i2nsICVD+RNsAfbLtRjxIs="
+        - secure: "dL1elsbaCqXNEHZw+2Rc7nG2ANLlf9TBwaR4UY74QuHumNbEbShYKTityAXMjcQIgxBq+3ye40kj6/vipmBFD1Haot5qRpgLKL9/bR9QchCEJjfy9KYDvHttuAcgVC9a4z1Zk0jal5HMrdd7DIL7jkvs7iNh2JoDWy4R6EbS4Sk="
+install:
+    # Install dependencies
+    - cpanm --installdeps --notest .
+script:
+    - perl Makefile.PL
+    - make
+    - make test
+    - make install
+    - make clean

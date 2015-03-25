@@ -1,3 +1,4 @@
+.travis.yml
 bin/copy-kvs.pl
 Changes
 lib/GridFSToS3.pm

@@ -12,3 +12,6 @@ blib
 Makefile\.old
 MANIFEST\.bak
 MYMETA
+
+# Devel::Cover::Coveralls output
+cover_db

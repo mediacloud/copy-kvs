@@ -119,3 +119,6 @@ foreach my $key ( @{ $response->{keys} } ) {
 
 $native_source_mongo_database->drop;
 $native_destination_mongo_database->drop;
+
+unlink $config->{ connectors }->{ "mongodb_gridfs_test" }->{ last_copied_file };
+unlink $config->{ connectors }->{ "amazon_s3_test" }->{ last_copied_file };

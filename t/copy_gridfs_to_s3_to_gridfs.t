@@ -112,7 +112,7 @@ foreach my $key ( @{ $response->{keys} } ) {
 }
 # say STDERR "Expected: " . Dumper(@files);
 # say STDERR "Got: " . Dumper(@files_restored_from_s3);
-cmp_bag(\@files_restored_from_s3, \@files, 'List of files and their contents match');
+cmp_bag(\@files_restored_from_s3, \@files, 'List of files and their contents match; got: ' . Dumper(\@files_restored_from_s3) . '; expected: ' . Dumper(\@files));
 
 # Delete temporary bucket and databases, remove "last filename" files
 $response = $test_bucket->list_all;

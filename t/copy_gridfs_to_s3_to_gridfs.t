@@ -34,7 +34,7 @@ BEGIN
     use lib "$FindBin::Bin/../lib";
 
     use CopyKVS;
-    use Storage::Handler::GridFS;
+    use CopyKVS::Handler::GridFS;
     use Net::Amazon::S3;
     use MongoDB;
 }
@@ -69,7 +69,7 @@ my $native_mongo_client = MongoDB::MongoClient->new(
 my $test_source_database_name = $mongodb_connector->{ database } . '_src_' . random_string( 16 );
 say STDERR "Source database name: $test_source_database_name";
 my $native_source_mongo_database = $native_mongo_client->get_database( $test_source_database_name );
-my $gridfs_source                = Storage::Handler::GridFS->new(
+my $gridfs_source                = CopyKVS::Handler::GridFS->new(
     host     => $mongodb_connector->{ host },
     port     => $mongodb_connector->{ port },
     database => $test_source_database_name
@@ -78,7 +78,7 @@ my $gridfs_source                = Storage::Handler::GridFS->new(
 my $test_destination_database_name = $mongodb_connector->{ database } . '_dst_' . random_string( 16 );
 say STDERR "Destination database name: $test_destination_database_name";
 my $native_destination_mongo_database = $native_mongo_client->get_database( $test_destination_database_name );
-my $gridfs_destination                = Storage::Handler::GridFS->new(
+my $gridfs_destination                = CopyKVS::Handler::GridFS->new(
     host     => $mongodb_connector->{ host },
     port     => $mongodb_connector->{ port },
     database => $test_destination_database_name

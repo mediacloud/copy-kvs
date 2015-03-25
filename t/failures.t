@@ -21,7 +21,7 @@ BEGIN
     use lib "$FindBin::Bin/../lib";
 
     use CopyKVS;
-    use Storage::Handler::GridFS;
+    use CopyKVS::Handler::GridFS;
 }
 
 use File::Slurp;

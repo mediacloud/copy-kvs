@@ -1,4 +1,4 @@
-package Storage::Iterator::GridFS;
+package CopyKVS::Iterator::GridFS;
 
 # class for iterating over a list of files in MongoDB GridFS
 
@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Moose;
-with 'Storage::Iterator';
+with 'CopyKVS::Iterator';
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
@@ -15,7 +15,7 @@ Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [
 use constant GRIDFS_CHUNK_SIZE => 1000;
 
 # for valid_objectid()
-use Storage::Handler::GridFS;
+use CopyKVS::Handler::GridFS;
 
 has '_fs_files_collection' => ( is => 'rw' );
 has '_offset'              => ( is => 'rw' );
@@ -73,7 +73,7 @@ sub next($)
                         LOGDIE( "Offset file '" . $self->_offset . "' was not found." );
                     }
                     $offset_objectid = $offset_objectid->{ _id }->{ value };
-                    unless ( Storage::Handler::GridFS::valid_objectid( $offset_objectid ) )
+                    unless ( CopyKVS::Handler::GridFS::valid_objectid( $offset_objectid ) )
                     {
                         LOGDIE( "Offset file's '" . $self->_offset . "' ObjectId '$offset_objectid' is not valid." );
                     }
@@ -120,7 +120,7 @@ sub next($)
             my $object_objectid = $object->{ _id }->{ value };
             my $object_filename = $object->{ filename };
 
-            unless ( Storage::Handler::GridFS::valid_objectid( $object_objectid ) )
+            unless ( CopyKVS::Handler::GridFS::valid_objectid( $object_objectid ) )
             {
                 LOGDIE( "File's '$object_filename' ObjectId '$object_objectid' is not valid." );
             }

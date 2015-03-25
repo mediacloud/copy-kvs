@@ -1,4 +1,4 @@
-package Storage::Handler::GridFS;
+package CopyKVS::Handler::GridFS;
 
 # class for storing / loading files in GridFS (MongoDB)
 
@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Moose;
-with 'Storage::Handler';
+with 'CopyKVS::Handler';
 
 use MongoDB 0.700.0;
 use MongoDB::GridFS;
@@ -16,7 +16,7 @@ Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [
 
 use POSIX qw(floor);
 
-use Storage::Iterator::GridFS;
+use CopyKVS::Iterator::GridFS;
 
 # MongoDB's number of read / write attempts
 # (in case waiting 60 seconds for the read / write to happen doesn't help, the instance should
@@ -365,7 +365,7 @@ sub list_iterator($;$)
     my $iterator;
     eval {
         # See README.mdown for the explanation of why we don't use MongoDB::Cursor here
-        $iterator = Storage::Iterator::GridFS->new(
+        $iterator = CopyKVS::Iterator::GridFS->new(
             fs_files_collection => $self->_mongodb_fs_files_collection,
             offset              => $filename_offset,
             read_attempts       => MONGODB_READ_ATTEMPTS

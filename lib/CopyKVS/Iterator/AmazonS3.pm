@@ -1,4 +1,4 @@
-package Storage::Iterator::AmazonS3;
+package CopyKVS::Iterator::AmazonS3;
 
 # class for iterating over a list of files in Amazon S3
 
@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Moose;
-with 'Storage::Iterator';
+with 'CopyKVS::Iterator';
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );

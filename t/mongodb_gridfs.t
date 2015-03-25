@@ -20,7 +20,7 @@ BEGIN
     use FindBin;
     use lib "$FindBin::Bin/../lib";
 
-    use Storage::Handler::GridFS;
+    use CopyKVS::Handler::GridFS;
     use MongoDB;
 }
 
@@ -38,7 +38,7 @@ my $native_mongo_client = MongoDB::MongoClient->new(
 # Should auto-create on first write
 my $native_mongo_database = $native_mongo_client->get_database( $mongodb_connector->{ database } );
 
-my $gridfs = Storage::Handler::GridFS->new(
+my $gridfs = CopyKVS::Handler::GridFS->new(
     host     => $mongodb_connector->{ host },
     port     => $mongodb_connector->{ port },
     database => $mongodb_connector->{ database }

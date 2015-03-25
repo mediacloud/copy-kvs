@@ -1,4 +1,4 @@
-package Storage::Handler::AmazonS3;
+package CopyKVS::Handler::AmazonS3;
 
 # class for storing / loading files from / to Amazon S3
 
@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Moose;
-with 'Storage::Handler';
+with 'CopyKVS::Handler';
 
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
@@ -17,7 +17,7 @@ use Net::Amazon::S3 0.59;
 
 use POSIX qw(floor);
 
-use Storage::Iterator::AmazonS3;
+use CopyKVS::Iterator::AmazonS3;
 
 # S3's number of read / write attempts
 # (in case waiting 20 seconds for the read / write to happen doesn't help, the instance should
@@ -411,7 +411,7 @@ sub list_iterator($;$)
 
     my $iterator;
     eval {
-        $iterator = Storage::Iterator::AmazonS3->new(
+        $iterator = CopyKVS::Iterator::AmazonS3->new(
             s3            => $self->_s3,
             bucket_name   => $self->_config_bucket_name,
             prefix        => $self->_config_directory_name,

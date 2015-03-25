@@ -1,4 +1,4 @@
-package Storage::Handler;
+package CopyKVS::Handler;
 
 #
 # abstract class for storing / loading files
@@ -8,7 +8,7 @@ use strict;
 use warnings;
 
 use Moose::Role;
-use Storage::Iterator;
+use CopyKVS::Iterator;
 
 # Fetch file
 # returns file contents on success; dies on error
@@ -26,7 +26,7 @@ requires 'head';
 # returns true on success; dies on error
 requires 'delete';
 
-# Returns file list iterator of Storage::Iterator type
+# Returns file list iterator of CopyKVS::Iterator type
 # (from the beginning or from a specified filename offset);
 # dies on error
 requires 'list_iterator';

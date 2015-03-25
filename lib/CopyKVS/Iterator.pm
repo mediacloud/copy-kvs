@@ -1,4 +1,4 @@
-package Storage::Iterator;
+package CopyKVS::Iterator;
 
 #
 # abstract class for iterating over files

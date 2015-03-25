@@ -28,7 +28,7 @@ BEGIN
     use FindBin;
     use lib "$FindBin::Bin/../lib";
 
-    use Storage::Handler::AmazonS3;
+    use CopyKVS::Handler::AmazonS3;
     use Net::Amazon::S3;
 }
 
@@ -52,13 +52,13 @@ my $test_bucket = $native_s3->add_bucket( { bucket => $s3_connector->{ bucket_na
   or die $native_s3->err . ": " . $native_s3->errstr;
 
 # Instances with / without directory name
-my $s3_with_directory = Storage::Handler::AmazonS3->new(
+my $s3_with_directory = CopyKVS::Handler::AmazonS3->new(
     access_key_id     => $s3_connector->{ access_key_id },
     secret_access_key => $s3_connector->{ secret_access_key },
     bucket_name       => $s3_connector->{ bucket_name },
     directory_name    => $s3_connector->{ directory_name }
 );
-my $s3_without_directory = Storage::Handler::AmazonS3->new(
+my $s3_without_directory = CopyKVS::Handler::AmazonS3->new(
     access_key_id     => $s3_connector->{ access_key_id },
     secret_access_key => $s3_connector->{ secret_access_key },
     bucket_name       => $s3_connector->{ bucket_name },

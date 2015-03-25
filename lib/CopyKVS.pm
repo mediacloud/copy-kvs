@@ -1,4 +1,4 @@
-package GridFSToS3;
+package CopyKVS;
 
 use strict;
 use warnings;
@@ -299,12 +299,12 @@ sub copy_kvs($$$)
 
 =head1 NAME
 
-GridFSToS3 - Copy objects between various key-value stores (MongoDB GridFS,
+CopyKVS - Copy objects between various key-value stores (MongoDB GridFS,
 Amazon S3, PostgreSQL BLOB tables)
 
 =head1 SYNOPSIS
 
-  use GridFSToS3;
+  use CopyKVS;
 
 =head1 DESCRIPTION
 

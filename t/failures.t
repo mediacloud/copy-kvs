@@ -20,7 +20,7 @@ BEGIN
     use FindBin;
     use lib "$FindBin::Bin/../lib";
 
-    use GridFSToS3;
+    use CopyKVS;
     use Storage::Handler::GridFS;
 }
 
@@ -41,7 +41,7 @@ write_file( $config->{ lock_file }, '1' );
 # Copy files from source GridFS database to S3
 $config->{ connectors }->{ "mongodb_gridfs_test" }->{ database } = $test_source_database_name;
 $config->{ connectors }->{ "amazon_s3_test" }->{ bucket_name }   = $test_bucket_name;
-eval { GridFSToS3::copy_kvs( $config, 'mongodb_gridfs_test', 'amazon_s3_test' ); };
+eval { CopyKVS::copy_kvs( $config, 'mongodb_gridfs_test', 'amazon_s3_test' ); };
 my $error_message = $@;
 ok( $error_message,                 "Copy from source GridFS to S3 while lock file is present: $error_message" );
 ok( $error_message =~ /^Lock file/, "Copy subroutine complains about lock file being present: $error_message" );

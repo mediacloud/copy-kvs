@@ -181,9 +181,9 @@ After copying a bunch of files from GridFS (MongoDB v2.2.3) to S3, one of the wo
 	2013-07-03 10:51:40,429 [1322]: Retrying (1)...
 	2013-07-03 10:51:40,438 [1325]: Attempt to read from '272462482' didn't succeed because: recv timed out (19000 ms) at local/lib/perl5/x86_64-linux-thread-multi/MongoDB/Cursor.pm line 161.
 	2013-07-03 10:51:40,438 [1325]: Retrying (1)...
-	boss read from app: sysread: Connection reset by peer at <...>/GridFSToS3.pm line 208
-	 at <...>/GridFSToS3.pm line 208
-	 at <...>/GridFSToS3.pm line 208
+	boss read from app: sysread: Connection reset by peer at <...>/CopyKVS.pm line 208
+	 at <...>/CopyKVS.pm line 208
+	 at <...>/CopyKVS.pm line 208
 	2013-07-03 10:51:40,691 [1338]: Attempt to read from '272462804' didn't succeed because: recv timed out (19000 ms) at local/lib/perl5/x86_64-linux-thread-multi/MongoDB/Cursor.pm line 161.
 	2013-07-03 10:51:40,691 [1338]: Retrying (1)...
 	2013-07-03 10:51:40,697 [1316]: Attempt to read from '272462812' didn't succeed because: recv timed out (19000 ms) at local/lib/perl5/x86_64-linux-thread-multi/MongoDB/Cursor.pm line 161.

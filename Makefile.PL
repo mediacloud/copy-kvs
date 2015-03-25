@@ -2,10 +2,10 @@ use 5.016003;
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    NAME          => 'GridFSToS3',
+    NAME          => 'CopyKVS',
     AUTHOR        => 'Linas Valiukas <lvaliukas@cyber.law.harvard.edu>',
-    VERSION_FROM  => 'lib/GridFSToS3.pm',
-    ABSTRACT_FROM => 'lib/GridFSToS3.pm',
+    VERSION_FROM  => 'lib/CopyKVS.pm',
+    ABSTRACT_FROM => 'lib/CopyKVS.pm',
     ( $ExtUtils::MakeMaker::VERSION >= 6.3002
         ? ( 'LICENSE' => 'agpl' )
         : () ),

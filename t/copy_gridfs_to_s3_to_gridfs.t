@@ -33,7 +33,7 @@ BEGIN
     use FindBin;
     use lib "$FindBin::Bin/../lib";
 
-    use GridFSToS3;
+    use CopyKVS;
     use Storage::Handler::GridFS;
     use Net::Amazon::S3;
     use MongoDB;
@@ -99,11 +99,11 @@ for my $file ( @files )
 
 # Copy files from source GridFS database to S3
 $config->{ connectors }->{ "mongodb_gridfs_test" }->{ database } = $test_source_database_name;
-ok( GridFSToS3::copy_kvs( $config, "mongodb_gridfs_test", "amazon_s3_test" ), "Copy from source GridFS to S3" );
+ok( CopyKVS::copy_kvs( $config, "mongodb_gridfs_test", "amazon_s3_test" ), "Copy from source GridFS to S3" );
 
 # Copy files back from S3 to GridFS
 $config->{ connectors }->{ "mongodb_gridfs_test" }->{ database } = $test_destination_database_name;
-ok( GridFSToS3::copy_kvs( $config, "amazon_s3_test", "mongodb_gridfs_test" ), "Copy from S3 to destination GridFS" );
+ok( CopyKVS::copy_kvs( $config, "amazon_s3_test", "mongodb_gridfs_test" ), "Copy from S3 to destination GridFS" );
 
 # Compare files
 my $response = $test_bucket->list_all( { prefix => $s3_connector->{ directory_name } } );

@@ -1,7 +1,7 @@
 .travis.yml
 bin/copy-kvs.pl
 Changes
-lib/GridFSToS3.pm
+lib/CopyKVS.pm
 lib/Storage/Handler.pm
 lib/Storage/Handler/AmazonS3.pm
 lib/Storage/Handler/GridFS.pm

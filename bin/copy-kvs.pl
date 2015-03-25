@@ -6,7 +6,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/../lib";
 
-use GridFSToS3;
+use CopyKVS;
 
 use YAML qw(LoadFile);
 
@@ -28,7 +28,7 @@ sub main
         die "Unable to read configuration from '$config_file': $@";
     }
 
-    GridFSToS3::copy_kvs( $config, $from_connector, $to_connector );
+    CopyKVS::copy_kvs( $config, $from_connector, $to_connector );
 }
 
 main();

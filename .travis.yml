@@ -16,9 +16,9 @@ env:
         - secure: "dL1elsbaCqXNEHZw+2Rc7nG2ANLlf9TBwaR4UY74QuHumNbEbShYKTityAXMjcQIgxBq+3ye40kj6/vipmBFD1Haot5qRpgLKL9/bR9QchCEJjfy9KYDvHttuAcgVC9a4z1Zk0jal5HMrdd7DIL7jkvs7iNh2JoDWy4R6EbS4Sk="
 install:
     # Install dependencies
-    - cpanm --installdeps --notest .
+    - cpanm --quiet --installdeps --notest .
     # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting
-    - cpanm --notest Devel::Cover::Report::Coveralls
+    - cpanm --quiet --notest Devel::Cover::Report::Coveralls
 script:
     - perl Makefile.PL
     - make

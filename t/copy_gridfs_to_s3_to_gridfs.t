@@ -96,7 +96,7 @@ $config->{ connectors }->{ "mongodb_gridfs_test" }->{database } = $test_destinat
 ok( GridFSToS3::copy_kvs( $config, "amazon_s3_test", "mongodb_gridfs_test" ), "Copy from S3 to destination GridFS" );
 
 # Compare files
-my $response = $test_bucket->list_all;
+my $response = $test_bucket->list_all({prefix => $s3_connector->{ directory_name }});
 my @files_restored_from_s3;
 foreach my $key ( @{ $response->{keys} } ) {
 	my $file = $test_bucket->get_key($key->{key});
@@ -115,7 +115,7 @@ foreach my $key ( @{ $response->{keys} } ) {
 cmp_bag(\@files_restored_from_s3, \@files, 'List of files and their contents match; got: ' . Dumper(\@files_restored_from_s3) . '; expected: ' . Dumper(\@files));
 
 # Delete temporary bucket and databases, remove "last filename" files
-$response = $test_bucket->list_all;
+$response = $test_bucket->list_all({prefix => $s3_connector->{ directory_name }});
 foreach my $key ( @{ $response->{keys} } ) {
 	$test_bucket->delete_key($key->{key});
 }

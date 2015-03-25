@@ -2,6 +2,10 @@
 
 This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to [Amazon S3][s3] and vice versa.
 
+## Build Status
+
+[![Build Status](https://travis-ci.org/berkmancenter/copy-kvs.svg?branch=master)](https://travis-ci.org/berkmancenter/copy-kvs) 
+[![Coverage Status](https://coveralls.io/repos/berkmancenter/copy-kvs/badge.png?branch=master)](https://coveralls.io/r/berkmancenter/copy-kvs)
 
 ## Usage
 

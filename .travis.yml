@@ -17,9 +17,11 @@ env:
 install:
     # Install dependencies
     - cpanm --installdeps --notest .
+    # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting
+    - cpanm --notest Devel::Cover::Report::Coveralls
 script:
     - perl Makefile.PL
     - make
-    - make test
+    - cover -test -report coveralls
     - make install
     - make clean

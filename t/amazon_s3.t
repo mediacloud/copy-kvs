@@ -43,6 +43,9 @@ my $native_s3 = Net::Amazon::S3->new(
 my $test_bucket = $native_s3->add_bucket( { bucket => $s3_connector->{ bucket_name } } )
 	or die $native_s3->err . ": " . $native_s3->errstr;
 
+# Randomize directory name so that multiple tests could run concurrently
+$s3_connector->{ directory_name } = $s3_connector->{ directory_name } . '-' . random_string( 16 );
+
 # Instances with / without directory name
 my $s3_with_directory = Storage::Handler::AmazonS3->new(
     access_key_id => $s3_connector->{ access_key_id },

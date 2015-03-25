@@ -41,6 +41,9 @@ my $config = configuration_from_env();
 my $mongodb_connector = $config->{ connectors }->{ "mongodb_gridfs_test" };
 my $s3_connector = $config->{ connectors }->{ "amazon_s3_test" };
 
+# Randomize directory name so that multiple tests could run concurrently
+$s3_connector->{ directory_name } = $s3_connector->{ directory_name } . '-' . random_string( 16 );
+
 my $native_s3 = Net::Amazon::S3->new({
 	aws_access_key_id     => $s3_connector->{ access_key_id },
 	aws_secret_access_key => $s3_connector->{ secret_access_key },

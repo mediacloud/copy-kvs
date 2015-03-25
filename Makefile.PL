@@ -22,7 +22,6 @@ WriteMakefile(
         # test
         'Test::Deep' => 0,
         'Test::More' => 0,
-        'Test::NoWarnings' => 1.04,
         'Test::Pod' => 1.45,
         'Test::Pod::Coverage' => 1.08,
     },

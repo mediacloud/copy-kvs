@@ -5,7 +5,7 @@ Perl script that can be used to copy a lot of objects (files) between [MongoDB G
 ## Build Status
 
 [![Build Status](https://travis-ci.org/berkmancenter/copy-kvs.svg?branch=master)](https://travis-ci.org/berkmancenter/copy-kvs) 
-[![Coverage Status](https://coveralls.io/repos/berkmancenter/copy-kvs/badge.png?branch=master)](https://coveralls.io/r/berkmancenter/copy-kvs)
+[![Coverage Status](https://coveralls.io/repos/berkmancenter/copy-kvs/badge.svg?branch=master)](https://coveralls.io/r/berkmancenter/copy-kvs?branch=master)
 
 ## Usage
 

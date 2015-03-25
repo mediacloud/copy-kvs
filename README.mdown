@@ -1,6 +1,6 @@
-# MongoDB GridFS <-> Amazon S3 copy script
+# copy-kvs
 
-This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to [Amazon S3][s3] and vice versa.
+Perl script that can be used to copy a lot of objects (files) between [MongoDB GridFS][gridfs] and [Amazon S3][s3].
 
 ## Build Status
 
@@ -9,30 +9,27 @@ This Perl script can be used to copy files stored in [MongoDB GridFS][gridfs] to
 
 ## Usage
 
-1. Copy configuration template file `gridfs-to-s3.yml.dist` to `gridfs-to-s3.yml`.
-2. Edit configuration file `gridfs-to-s3.yml` to set the MongoDB and GridFS connection settings and other properties.
-3. To copy files **from GridFS to S3**, run: `./copy-gridfs-to-s3.pl gridfs-to-s3.yml`
-4. To copy files **from S3 to GridFS**, run: `./copy-s3-to-gridfs.pl gridfs-to-s3.yml`
+1. Copy configuration template file:
 
+        cp sample-config/gridfs-to-s3.yml.dist gridfs-to-s3.yml
 
-## Requirements
+2. Edit configuration file `gridfs-to-s3.yml` to set the MongoDB GridFS / Amazon S3 connection settings and other properties.
+3. To copy files **from GridFS to S3**, run:
 
-* Perl 5.10+
-* [Moose](http://search.cpan.org/dist/Moose/)
-* [Log::Log4perl](http://search.cpan.org/dist/Log-Log4perl/)
-* [YAML](http://search.cpan.org/dist/YAML/)
-* [Parallel::Fork::BossWorkerAsync](http://search.cpan.org/dist/Parallel-Fork-BossWorkerAsync/)
-* [Net::Amazon::S3](http://search.cpan.org/dist/Net-Amazon-S3/)
-* [MongoDB](http://search.cpan.org/dist/MongoDB/)
+        perl bin/copy-kvs.pl gridfs-to-s3.yml mongodb_gridfs amazon_s3
 
-## Code formatting
+4. To copy files **from S3 to GridFS**, run:
+
+        perl bin/copy-kvs.pl gridfs-to-s3.yml amazon_s3 mongodb_gridfs
+
+## Implementation details
+
+### Code formatting
 
 Install `perltidy` Git hook to automatically fix script formatting:
 
     cpanm --installdeps .
     githook-perltidy install
-
-## Implementation details
 
 ### Sorting in GridFS
 
@@ -123,7 +120,7 @@ The test `t/copy_gridfs_to_s3_to_gridfs.t` will create and afterwards remove:
 
 ## Known bugs
 
-### (probably fixed) `recv timed out`
+### (hopefully fixed) `recv timed out`
 
 After copying a bunch of files from GridFS (MongoDB v2.2.3) to S3, one of the workers crashes with:
 

@@ -1,3 +1,5 @@
+.perltidyrc
+.podtidy-opts
 .travis.yml
 bin/copy-kvs.pl
 Changes

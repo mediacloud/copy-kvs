@@ -20,3 +20,6 @@ Build
 pm_to_blib
 *.bak
 
+# Devel::Cover
+cover_db/
+

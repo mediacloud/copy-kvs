@@ -32,28 +32,28 @@ BEGIN {
 my $config = configuration_from_env();
 
 # Create temporary bucket for unit tests
-my $test_bucket_name = 'gridfs-to-s3.testing.' . random_string(32);
-say STDERR "Creating temporary bucket '$test_bucket_name'...";
+my $s3_connector = $config->{ connectors }->{ "amazon_s3_test" };
+say STDERR "Creating temporary bucket '$s3_connector->{ bucket_name }'...";
 my $native_s3 = Net::Amazon::S3->new(
-	{	aws_access_key_id     => $config->{amazon_s3}->{access_key_id},
-		aws_secret_access_key => $config->{amazon_s3}->{secret_access_key},
+	{	aws_access_key_id     => $s3_connector->{ access_key_id },
+		aws_secret_access_key => $s3_connector->{ secret_access_key },
 		retry                 => 1,
 	}
 );
-my $test_bucket = $native_s3->add_bucket( { bucket => $test_bucket_name } )
+my $test_bucket = $native_s3->add_bucket( { bucket => $s3_connector->{ bucket_name } } )
 	or die $native_s3->err . ": " . $native_s3->errstr;
 
 # Instances with / without directory name
 my $s3_with_directory = Storage::Handler::AmazonS3->new(
-    access_key_id => $config->{amazon_s3}->{access_key_id},
-    secret_access_key => $config->{amazon_s3}->{secret_access_key},
-    bucket_name => $test_bucket_name,
-    directory_name => 'files_from_gridfs'
+    access_key_id => $s3_connector->{ access_key_id },
+    secret_access_key => $s3_connector->{ secret_access_key },
+    bucket_name => $s3_connector->{ bucket_name },
+    directory_name => $s3_connector->{ directory_name }
 );
 my $s3_without_directory = Storage::Handler::AmazonS3->new(
-    access_key_id => $config->{amazon_s3}->{access_key_id},
-    secret_access_key => $config->{amazon_s3}->{secret_access_key},
-    bucket_name => $test_bucket_name,
+    access_key_id => $s3_connector->{ access_key_id },
+    secret_access_key => $s3_connector->{ secret_access_key },
+    bucket_name => $s3_connector->{ bucket_name },
     directory_name => ''
 );
 
@@ -105,6 +105,3 @@ sub run_tests($$)
 # Run tests for both buckets
 run_tests($s3_with_directory, 'with directory');
 run_tests($s3_without_directory, 'without directory');
-
-# Delete temporary bucket
-$test_bucket->delete_bucket or die $native_s3->err . ": " . $native_s3->errstr;

@@ -37,42 +37,39 @@ BEGIN {
 # Connection configuration
 my $config = configuration_from_env();
 
-# Rename backup / restore files to not touch the "production" ones
-$config->{lock_file} .= random_string(32);
-$config->{file_with_last_filename_copied_from_gridfs_to_s3} .= random_string(32);
-$config->{file_with_last_filename_copied_from_s3_to_gridfs} .= random_string(32);
-
 # Create temporary bucket for unit tests
-my $test_bucket_name = 'gridfs-to-s3.testing.' . random_string(32);
+my $mongodb_connector = $config->{ connectors }->{ "mongodb_gridfs_test" };
+my $s3_connector = $config->{ connectors }->{ "amazon_s3_test" };
+
 my $native_s3 = Net::Amazon::S3->new({
-	aws_access_key_id     => $config->{amazon_s3}->{access_key_id},
-	aws_secret_access_key => $config->{amazon_s3}->{secret_access_key},
+	aws_access_key_id     => $s3_connector->{ access_key_id },
+	aws_secret_access_key => $s3_connector->{ secret_access_key },
 	retry                 => 1,
 });
-my $test_bucket = $native_s3->add_bucket( { bucket => $test_bucket_name } )
+my $test_bucket = $native_s3->add_bucket( { bucket => $s3_connector->{ bucket_name } } )
 	or die $native_s3->err . ": " . $native_s3->errstr;
 
 # Create temporary databases for unit tests
 my $native_mongo_client = MongoDB::MongoClient->new(
-	host => $config->{mongodb_gridfs}->{host},
-	port => $config->{mongodb_gridfs}->{port}
+	host => $mongodb_connector->{ host },
+	port => $mongodb_connector->{ port }
 );
 # Should auto-create on first write
-my $test_source_database_name = 'gridfs-to-s3_testing_source_' . random_string(16);
+my $test_source_database_name = $mongodb_connector->{ database } . '_src_' . random_string(16);
 say STDERR "Source database name: $test_source_database_name";
-my $native_source_mongo_database = $native_mongo_client->get_database($test_source_database_name);
+my $native_source_mongo_database = $native_mongo_client->get_database( $test_source_database_name );
 my $gridfs_source = Storage::Handler::GridFS->new(
-    host => $config->{mongodb_gridfs}->{host} || 'localhost',
-    port => $config->{mongodb_gridfs}->{port} || 27017,
+    host => $mongodb_connector->{ host },
+    port => $mongodb_connector->{ port },
     database => $test_source_database_name
 );
 
-my $test_destination_database_name = 'gridfs-to-s3_testing_destination_' . random_string(16);
+my $test_destination_database_name = $mongodb_connector->{ database } . '_dst_' . random_string(16);
 say STDERR "Destination database name: $test_destination_database_name";
-my $native_destination_mongo_database = $native_mongo_client->get_database($test_destination_database_name);
+my $native_destination_mongo_database = $native_mongo_client->get_database( $test_destination_database_name );
 my $gridfs_destination = Storage::Handler::GridFS->new(
-    host => $config->{mongodb_gridfs}->{host} || 'localhost',
-    port => $config->{mongodb_gridfs}->{port} || 27017,
+    host => $mongodb_connector->{ host },
+    port => $mongodb_connector->{ port },
     database => $test_destination_database_name
 );
 
@@ -88,13 +85,12 @@ for my $file (@files) {
 }
 
 # Copy files from source GridFS database to S3
-$config->{mongodb_gridfs}->{database} = $test_source_database_name;
-$config->{amazon_s3}->{bucket_name} = $test_bucket_name;
-ok( GridFSToS3::copy_gridfs_to_s3($config), "Copy from source GridFS to S3" );
+$config->{ connectors }->{ "mongodb_gridfs_test" }->{database } = $test_source_database_name;
+ok( GridFSToS3::copy_kvs( $config, "mongodb_gridfs_test", "amazon_s3_test" ), "Copy from source GridFS to S3" );
 
 # Copy files back from S3 to GridFS
-$config->{mongodb_gridfs}->{database} = $test_destination_database_name;
-ok( GridFSToS3::copy_s3_to_gridfs($config), "Copy from S3 to destination GridFS" );
+$config->{ connectors }->{ "mongodb_gridfs_test" }->{database } = $test_destination_database_name;
+ok( GridFSToS3::copy_kvs( $config, "amazon_s3_test", "mongodb_gridfs_test" ), "Copy from S3 to destination GridFS" );
 
 # Compare files
 my $response = $test_bucket->list_all;
@@ -105,9 +101,9 @@ foreach my $key ( @{ $response->{keys} } ) {
 		filename => $key->{key},
 		contents => $file->{value}
 	};
-	if ($config->{amazon_s3}->{directory_name}) {
+	if ($s3_connector->{ directory_name }) {
 		# Strip directory prefix
-		$file->{filename} =~ s/^$config->{amazon_s3}->{directory_name}\///;
+		$file->{filename} =~ s/^$s3_connector->{ directory_name }\///;
 	}
 	push (@files_restored_from_s3, $file);
 }
@@ -120,8 +116,6 @@ $response = $test_bucket->list_all;
 foreach my $key ( @{ $response->{keys} } ) {
 	$test_bucket->delete_key($key->{key});
 }
-$test_bucket->delete_bucket or die $native_s3->err . ": " . $native_s3->errstr;
+
 $native_source_mongo_database->drop;
 $native_destination_mongo_database->drop;
-unlink $config->{file_with_last_filename_copied_from_gridfs_to_s3};
-unlink $config->{file_with_last_filename_copied_from_s3_to_gridfs};

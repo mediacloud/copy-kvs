@@ -26,19 +26,19 @@ BEGIN {
 my $config = configuration_from_env();
 
 # Create temporary database for unit tests
-my $test_database_name = 'gridfs-to-s3_testing_' . random_string(32);
-say STDERR "Creating temporary database '$test_database_name'...";
+my $mongodb_connector = $config->{ connectors }->{ "mongodb_gridfs_test" };
+say STDERR "Creating temporary database '$mongodb_connector->{ database }'...";
 my $native_mongo_client = MongoDB::MongoClient->new(
-	host => $config->{mongodb_gridfs}->{host},
-	port => $config->{mongodb_gridfs}->{port}
+	host => $mongodb_connector->{ host },
+	port => $mongodb_connector->{ port }
 );
 # Should auto-create on first write
-my $native_mongo_database = $native_mongo_client->get_database($test_database_name);
+my $native_mongo_database = $native_mongo_client->get_database($mongodb_connector->{ database });
 
 my $gridfs = Storage::Handler::GridFS->new(
-    host => $config->{mongodb_gridfs}->{host} || 'localhost',
-    port => $config->{mongodb_gridfs}->{port} || 27017,
-    database => $test_database_name
+    host => $mongodb_connector->{ host },
+    port => $mongodb_connector->{ port },
+    database => $mongodb_connector->{ database }
 );
 
 my $test_filename = 'xyz';

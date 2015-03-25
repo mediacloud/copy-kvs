@@ -11,11 +11,22 @@ require 't/test_helpers.inc.pl';
 #
 # use Test::NoWarnings;
 
-use Test::More tests => 44;
+use Test::More;
 use Test::Deep;
 
-BEGIN { use_ok('Storage::Handler::AmazonS3'); }
-BEGIN { use_ok('Net::Amazon::S3'); }
+if (s3_test_configuration_is_set()) {
+	plan tests => 42;
+} else {
+	plan skip_all => "S3 test configuration is not set in the environment.";
+}
+
+BEGIN {
+	use FindBin;
+	use lib "$FindBin::Bin/../lib";
+
+	use Storage::Handler::AmazonS3;
+	use Net::Amazon::S3;
+}
 
 # Connection configuration
 my $config = configuration_from_env();

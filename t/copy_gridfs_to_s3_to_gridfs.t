@@ -11,17 +11,28 @@ require 't/test_helpers.inc.pl';
 #
 # use Test::NoWarnings;
 
-use Test::More tests => 7;
+use Test::More;
 use Test::Deep;
+
+if (s3_test_configuration_is_set()) {
+	plan tests => 3;
+} else {
+	plan skip_all => "S3 test configuration is not set in the environment.";
+}
 
 use constant NUMBER_OF_TEST_FILES => 10;
 
 use Data::Dumper;
 
-BEGIN { use_ok('GridFSToS3'); }
-BEGIN { use_ok('Storage::Handler::GridFS'); }
-BEGIN { use_ok('Net::Amazon::S3'); }
-BEGIN { use_ok('MongoDB'); }
+BEGIN {
+	use FindBin;
+	use lib "$FindBin::Bin/../lib";
+
+	use GridFSToS3;
+	use Storage::Handler::GridFS;
+	use Net::Amazon::S3;
+	use MongoDB;
+}
 
 # Connection configuration
 my $config = configuration_from_env();

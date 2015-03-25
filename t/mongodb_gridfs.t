@@ -11,11 +11,16 @@ require 't/test_helpers.inc.pl';
 #
 # use Test::NoWarnings;
 
-use Test::More tests => 23;
+use Test::More tests => 21;
 use Test::Deep;
 
-BEGIN { use_ok('Storage::Handler::GridFS'); }
-BEGIN { use_ok('MongoDB'); }
+BEGIN {
+	use FindBin;
+	use lib "$FindBin::Bin/../lib";
+
+	use Storage::Handler::GridFS;
+	use MongoDB;
+}
 
 # Connection configuration
 my $config = configuration_from_env();

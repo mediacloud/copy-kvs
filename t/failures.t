@@ -11,11 +11,16 @@ require 't/test_helpers.inc.pl';
 #
 # use Test::NoWarnings;
 
-use Test::More tests => 4;
+use Test::More tests => 2;
 use Test::Deep;
 
-BEGIN { use_ok('GridFSToS3'); }
-BEGIN { use_ok('Storage::Handler::GridFS'); }
+BEGIN {
+	use FindBin;
+	use lib "$FindBin::Bin/../lib";
+
+	use GridFSToS3;
+	use Storage::Handler::GridFS;
+}
 
 # Connection configuration
 my $config = configuration_from_env();

@@ -165,11 +165,15 @@ sub head($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
+    my $schema    = $self->_config_schema;
+    my $table     = $self->_config_table;
+    my $id_column = $self->_config_id_column;
+
     my $object_exists = $db->query(
         <<"EOF",
         SELECT 1
-        FROM ${self->_config_schema}.${self->_config_table}
-        WHERE ${self->_config_id_column} = ?
+        FROM $schema.$table
+        WHERE $id_column = ?
 EOF
         $filename
     )->flat;
@@ -190,10 +194,14 @@ sub delete($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
+    my $schema    = $self->_config_schema;
+    my $table     = $self->_config_table;
+    my $id_column = $self->_config_id_column;
+
     $db->query(
         <<"EOF",
-        DELETE FROM ${self->_config_schema}.${self->_config_table}
-        WHERE ${self->_config_id_column} = ?
+        DELETE FROM $schema.$table
+        WHERE $id_column = ?
 EOF
         $filename
     );
@@ -207,15 +215,18 @@ sub put($$$)
 
     my $db = $self->_db_handler_for_current_pid();
 
+    my $schema      = $self->_config_schema;
+    my $table       = $self->_config_table;
+    my $id_column   = $self->_config_id_column;
+    my $data_column = $self->_config_data_column;
+
     $db->begin_work;
 
-    my $sth;
-
-    $sth = $db->dbh->prepare(
+    my $sth = $db->dbh->prepare(
         <<"EOF",
-        UPDATE ${self->_config_schema}.${self->_config_table}
-        SET ${self->_config_data_column} = ?
-        WHERE ${self->_config_id_column} = ?
+        UPDATE $schema.$table
+        SET $data_column = ?
+        WHERE $id_column = ?
 EOF
     );
     $sth->bind_param( 1, $contents, { pg_type => DBD::Pg::PG_BYTEA } );
@@ -224,13 +235,13 @@ EOF
 
     $sth = $db->dbh->prepare(
         <<"EOF",
-        INSERT INTO ${self->_config_schema}.${self->_config_table}
-        (${self->_config_id_column}, ${self->_config_data_column})
+        INSERT INTO $schema.$table
+        ($id_column, $data_column)
             SELECT ?, ?
             WHERE NOT EXISTS (
                 SELECT 1
-                FROM ${self->_config_schema}.${self->_config_table}
-                WHERE object_id = ${self->_config_id_column}
+                FROM $schema.$table
+                WHERE $id_column = ?
             )
 EOF
     );
@@ -250,11 +261,16 @@ sub get($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
+    my $schema      = $self->_config_schema;
+    my $table       = $self->_config_table;
+    my $id_column   = $self->_config_id_column;
+    my $data_column = $self->_config_data_column;
+
     my $contents = $db->query(
         <<"EOF",
-        SELECT ${self->_config_data_column}
-        FROM ${self->_config_schema}.${self->_config_table}
-        WHERE ${self->_config_id_column} = ?
+        SELECT $data_column
+        FROM $schema.$table
+        WHERE $id_column = ?
 EOF
         $filename
     )->flat;

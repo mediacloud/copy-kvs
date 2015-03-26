@@ -32,7 +32,7 @@ has '_config_data_column' => ( is => 'rw', isa => 'Str' );
 has '_db' => ( is => 'rw' );
 
 # Primary key column name
-has '_primary_key_column_name' => ( is => 'rw' );
+has '_primary_key_column' => ( is => 'rw' );
 
 # Process PID (to prevent forks from attempting to clone database handler objects)
 has '_pid' => ( is => 'rw' );
@@ -147,12 +147,12 @@ EOF
     {
         LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " . "has more than one primary column" );
     }
-    my $primary_key_column_name = $primary_key_columns->[ 0 ]->{ name };
-    unless ( $primary_key_column_name )
+    my $primary_key_column = $primary_key_columns->[ 0 ]->{ name };
+    unless ( $primary_key_column )
     {
         LOGDIE( "Unable to determine primary key column name." );
     }
-    $self->_primary_key_column_name( $primary_key_column_name );
+    $self->_primary_key_column( $primary_key_column );
 
     $self->_db( $db );
 

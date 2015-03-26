@@ -418,7 +418,7 @@ sub list_iterator($;$)
             bucket_name   => $self->_config_bucket_name,
             prefix        => $self->_config_directory_name,
             offset        => $filename_offset,
-            read_attempts => AMAZON_S3_READ_ATTEMPTS
+            read_attempts => $AMAZON_S3_READ_ATTEMPTS
         );
     };
     if ( $@ or ( !$iterator ) )

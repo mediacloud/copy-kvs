@@ -20,9 +20,9 @@ before_install:
     - sudo ntpdate 0.amazon.pool.ntp.org
 install:
     # Install dependencies
-    - cpanm --quiet --installdeps --notest .
+    - travis_retry cpanm --quiet --installdeps --notest .
     # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting
-    - cpanm --quiet --notest Devel::Cover::Report::Coveralls
+    - travis_retry cpanm --quiet --notest Devel::Cover::Report::Coveralls
 script:
     - perl Makefile.PL
     - make

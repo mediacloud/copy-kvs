@@ -75,7 +75,9 @@ connectors:
         schema          : "public"
         # Table in which BLOBs are being stored
         table           : "binary_blobs"
+        # Column with object IDs (filenames)
+        id_column       : "object_id"
         # Column of type "bytea" in said table with BLOBs
-        column          : "data"
+        data_column     : "data"
         # File in which the last copied filename from PostgreSQL BLOBs is stored
         last_copied_file    : "copy-kvs-postgres.last"

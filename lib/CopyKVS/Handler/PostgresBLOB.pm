@@ -18,14 +18,15 @@ use DBD::Pg qw(:pg_types);
 use CopyKVS::Iterator::PostgresBLOB;
 
 # Configuration
-has '_config_host'     => ( is => 'rw', isa => 'Str' );
-has '_config_port'     => ( is => 'rw', isa => 'Int' );
-has '_config_username' => ( is => 'rw', isa => 'Str' );
-has '_config_password' => ( is => 'rw', isa => 'Str' );
-has '_config_database' => ( is => 'rw', isa => 'Str' );
-has '_config_schema'   => ( is => 'rw', isa => 'Str' );
-has '_config_table'    => ( is => 'rw', isa => 'Str' );
-has '_config_column'   => ( is => 'rw', isa => 'Str' );
+has '_config_host'        => ( is => 'rw', isa => 'Str' );
+has '_config_port'        => ( is => 'rw', isa => 'Int' );
+has '_config_username'    => ( is => 'rw', isa => 'Str' );
+has '_config_password'    => ( is => 'rw', isa => 'Str' );
+has '_config_database'    => ( is => 'rw', isa => 'Str' );
+has '_config_schema'      => ( is => 'rw', isa => 'Str' );
+has '_config_table'       => ( is => 'rw', isa => 'Str' );
+has '_config_id_column'   => ( is => 'rw', isa => 'Str' );
+has '_config_data_column' => ( is => 'rw', isa => 'Str' );
 
 # Database handler (DBIx::Simple instance)
 has '_db' => ( is => 'rw' );
@@ -45,8 +46,9 @@ sub BUILD
     $self->_config_password( $args->{ password } ) or LOGDIE( "Password is not set." );
     $self->_config_database( $args->{ database } ) or LOGDIE( "Database name is not set." );
     $self->_config_schema( $args->{ schema } || 'public' );
-    $self->_config_table( $args->{ table } )   or LOGDIE( "Table name is not set." );
-    $self->_config_column( $args->{ column } ) or LOGDIE( "Column name is not set." );
+    $self->_config_table( $args->{ table } )             or LOGDIE( "Table name is not set." );
+    $self->_config_id_column( $args->{ id_column } )     or LOGDIE( "ID column name is not set." );
+    $self->_config_data_column( $args->{ data_column } ) or LOGDIE( "Data column name is not set." );
 
     $self->_pid( $$ );
 }
@@ -75,8 +77,30 @@ sub _db_handler_for_current_pid($)
         LOGDIE( "Unable to connect to database with DSN '$dsn'" );
     }
 
-    # Check whether the table exists, has the required column, and the column is of type BYTEA
-    my @table_column_exists = $db->query(
+    # Check whether the table exists, has the required ID column, and the
+    # column is of the correct type
+    my @id_column_exists = $db->query(
+        <<EOF,
+        SELECT EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = ?
+              AND table_name = ?
+              AND column_name = ?
+              AND data_type IN ( 'integer', 'text' )
+        )
+EOF
+        $self->_config_schema, $self->_config_table, $self->_config_id_column
+    )->flat;
+    unless ( $id_column_exists[ 0 ] + 0 )
+    {
+        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " .
+              "does not exist or does not have ID column " . "'$self->_config_id_column' of correct type" );
+    }
+
+    # Check whether the table exists, has the required data column, and the
+    # column is of type BYTEA
+    my @data_column_exists = $db->query(
         <<EOF,
         SELECT EXISTS (
             SELECT 1
@@ -87,12 +111,14 @@ sub _db_handler_for_current_pid($)
               AND data_type = 'bytea'
         )
 EOF
-        $self->_config_schema, $self->_config_table, $self->_config_column
+        $self->_config_schema, $self->_config_table, $self->_config_data_column
     )->flat;
-    unless ( $table_column_exists[ 0 ] + 0 )
+    unless ( $data_column_exists[ 0 ] + 0 )
     {
-        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' does not exist " .
-              "or does not have column '$self->_config_column' of type BYTEA" );
+        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " .
+              "does not exist or does not have data column " . "'$self->_config_data_column' of type BYTEA" );
+    }
+
     }
 
     $self->_db( $db );

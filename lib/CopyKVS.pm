@@ -93,12 +93,13 @@ sub _new_storage_handler($$)
         $handler = CopyKVS::Handler::PostgresBLOB->new(
             host => $connector->{ host } || 'localhost',
             port => $connector->{ port } || 5432,
-            username => $connector->{ username },
-            password => $connector->{ password },
-            database => $connector->{ database },
-            schema   => $connector->{ schema } || 'public',
-            table    => $connector->{ table },
-            column   => $connector->{ column },
+            username    => $connector->{ username },
+            password    => $connector->{ password },
+            database    => $connector->{ database },
+            schema      => $connector->{ schema } || 'public',
+            table       => $connector->{ table },
+            id_column   => $connector->{ id_column },
+            data_column => $connector->{ data_column },
         );
 
     }

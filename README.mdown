@@ -107,15 +107,12 @@ This is because lexicographical order is the only one Amazon supports for sortin
 
 Execute:
 
-	GRIDFS_TO_S3_CONFIG=gridfs-to-s3.yml prove
+	COPY_KVS_S3_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
+	COPY_KVS_S3_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY" \
+	COPY_KVS_S3_BUCKET_NAME="copy-kvs-unit-tests" \
+	make test
 
 to run unit tests provided with the script.
-
-The test `t/copy_gridfs_to_s3_to_gridfs.t` will create and afterwards remove:
-
-* two temporary Mongo GridFS databases with the names such as `gridfs-to-s3_testing_source_33jdgSNyNWLykIXi` and `gridfs-to-s3_testing_destination_uBnqHweeexioHcXn`
-* one temporary Amazon S3 bucket with the name such as `gridfs-to-s3.testing.PGW22CuIuGbMQKMpTFqZsgqa5Th66yXB`.
-* a lock file, "last filename copied to S3" file and "last filename copied to GridFS" file, all appended with a randomly generated string.
 
 
 ## Known bugs

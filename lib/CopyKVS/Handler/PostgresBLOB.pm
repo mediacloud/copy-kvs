@@ -31,6 +31,9 @@ has '_config_data_column' => ( is => 'rw', isa => 'Str' );
 # Database handler (DBIx::Simple instance)
 has '_db' => ( is => 'rw' );
 
+# Primary key column name
+has '_primary_key_column_name' => ( is => 'rw' );
+
 # Process PID (to prevent forks from attempting to clone database handler objects)
 has '_pid' => ( is => 'rw' );
 
@@ -119,7 +122,37 @@ EOF
               "does not exist or does not have data column " . "'$self->_config_data_column' of type BYTEA" );
     }
 
+    # Get primary key column name (which will be used by the iterator for resuming)
+    my $primary_key_columns = $db->query(
+        <<EOF,
+            SELECT
+                pg_attribute.attname AS name,
+                FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS type
+            FROM pg_index, pg_class, pg_attribute, pg_namespace 
+            WHERE indrelid = pg_class.oid
+              AND nspname = ?
+              AND pg_class.oid = ?::regclass
+              AND pg_class.relnamespace = pg_namespace.oid
+              AND pg_attribute.attrelid = pg_class.oid
+              AND pg_attribute.attnum = ANY(pg_index.indkey)
+              AND indisprimary
+EOF
+        $self->_config_schema, $self->_config_table
+    )->hashes;
+    if ( scalar @{ $primary_key_columns } == 0 )
+    {
+        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " . "does not have a primary column" );
     }
+    if ( scalar @{ $primary_key_columns } > 1 )
+    {
+        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " . "has more than one primary column" );
+    }
+    my $primary_key_column_name = $primary_key_columns->[ 0 ]->{ name };
+    unless ( $primary_key_column_name )
+    {
+        LOGDIE( "Unable to determine primary key column name." );
+    }
+    $self->_primary_key_column_name( $primary_key_column_name );
 
     $self->_db( $db );
 

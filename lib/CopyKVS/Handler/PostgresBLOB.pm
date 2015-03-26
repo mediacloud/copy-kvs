@@ -61,8 +61,12 @@ sub _db_handler_for_current_pid($)
         return $self->_db;
     }
 
-    my $dsn =
-      sprintf( 'dbi:Pg:dbname=%s;host=%s;port=%d', $self->_config_database, $self->_config_host, $self->_config_port );
+    my $dsn = sprintf(
+        'dbi:Pg:dbname=%s;host=%s;port=%d',    #
+        $self->_config_database,               #
+        $self->_config_host,                   #
+        $self->_config_port
+    );
 
     say STDERR "Connecting to DSN '$dsn'...";
     my $db = DBIx::Simple->connect( $dsn, $self->_config_username, $self->_config_password );

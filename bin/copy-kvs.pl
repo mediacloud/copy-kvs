@@ -8,13 +8,16 @@ use lib "$FindBin::Bin/../lib";
 
 use CopyKVS;
 
+use Log::Log4perl qw(:easy);
+Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
+
 use YAML qw(LoadFile);
 
 sub main
 {
     unless ( $ARGV[ 2 ] )
     {
-        die "Usage: $0 config.yml from-connector to-connector";
+        LOGDIE( "Usage: $0 config.yml from-connector to-connector" );
     }
 
     my $config_file    = $ARGV[ 0 ];
@@ -25,7 +28,7 @@ sub main
     eval { $config = LoadFile( $config_file ); };
     if ( $@ )
     {
-        die "Unable to read configuration from '$config_file': $@";
+        LOGDIE( "Unable to read configuration from '$config_file': $@" );
     }
 
     CopyKVS::copy_kvs( $config, $from_connector, $to_connector );

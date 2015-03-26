@@ -160,7 +160,7 @@ sub _read_last_copied_file($$)
     my $offset_filename = read_file( $last_copied_file );
     unless ( defined $offset_filename )
     {
-        die "Last copied file is undefined (read from '$last_copied_file'";
+        LOGDIE( "Last copied file is undefined (read from '$last_copied_file')" );
     }
 
     chomp $offset_filename;

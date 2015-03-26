@@ -213,10 +213,8 @@ sub _global_timeout($$$)
     my $to_connector = $config->{ connectors }->{ $to_connector_name }
       or LOGDIE( "'To' connector '$to_connector_name' was not found." );
 
-    my $from_timeout = $from_connector->{ timeout }
-      or LOGDIE( "Invalid 'from' connector timeout" );
-    my $to_timeout = $to_connector->{ timeout }
-      or LOGDIE( "Invalid 'to' connector timeout" );
+    my $from_timeout = $from_connector->{ timeout } || -1;
+    my $to_timeout   = $to_connector->{ timeout }   || -1;
 
     return ( $from_timeout == -1 ? 0 : max( $from_timeout, $to_timeout ) * 3 );
 }

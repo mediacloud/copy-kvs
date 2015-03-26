@@ -165,7 +165,23 @@ sub head($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
-    LOGDIE( "Not implemented." );
+    my $object_exists = $db->query(
+        <<"EOF",
+        SELECT 1
+        FROM ${self->_config_schema}.${self->_config_table}
+        WHERE ${self->_config_id_column} = ?
+EOF
+        $filename
+    )->flat;
+
+    if ( $object_exists->[ 0 ] )
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 sub delete($$)
@@ -174,7 +190,15 @@ sub delete($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
-    LOGDIE( "Not implemented." );
+    $db->query(
+        <<"EOF",
+        DELETE FROM ${self->_config_schema}.${self->_config_table}
+        WHERE ${self->_config_id_column} = ?
+EOF
+        $filename
+    );
+
+    return 1;
 }
 
 sub put($$$)
@@ -183,7 +207,41 @@ sub put($$$)
 
     my $db = $self->_db_handler_for_current_pid();
 
-    LOGDIE( "Not implemented." );
+    $db->begin_work;
+
+    my $sth;
+
+    $sth = $db->dbh->prepare(
+        <<"EOF",
+        UPDATE ${self->_config_schema}.${self->_config_table}
+        SET ${self->_config_data_column} = ?
+        WHERE ${self->_config_id_column} = ?
+EOF
+    );
+    $sth->bind_param( 1, $contents, { pg_type => DBD::Pg::PG_BYTEA } );
+    $sth->bind_param( 2, $filename );
+    $sth->execute();
+
+    $sth = $db->dbh->prepare(
+        <<"EOF",
+        INSERT INTO ${self->_config_schema}.${self->_config_table}
+        (${self->_config_id_column}, ${self->_config_data_column})
+            SELECT ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM ${self->_config_schema}.${self->_config_table}
+                WHERE object_id = ${self->_config_id_column}
+            )
+EOF
+    );
+    $sth->bind_param( 1, $filename );
+    $sth->bind_param( 2, $contents, { pg_type => DBD::Pg::PG_BYTEA } );
+    $sth->bind_param( 3, $filename );
+    $sth->execute();
+
+    $db->commit;
+
+    return 1;
 }
 
 sub get($$)
@@ -192,7 +250,23 @@ sub get($$)
 
     my $db = $self->_db_handler_for_current_pid();
 
-    LOGDIE( "Not implemented." );
+    my $contents = $db->query(
+        <<"EOF",
+        SELECT ${self->_config_data_column}
+        FROM ${self->_config_schema}.${self->_config_table}
+        WHERE ${self->_config_id_column} = ?
+EOF
+        $filename
+    )->flat;
+
+    unless ( $contents->[ 0 ] )
+    {
+        LOGDIE( "Object with ID '$filename' was not found" );
+    }
+
+    $contents = $contents->[ 0 ];
+
+    return $contents;
 }
 
 sub list_iterator($;$)
@@ -201,7 +275,26 @@ sub list_iterator($;$)
 
     my $db = $self->_db_handler_for_current_pid();
 
-    LOGDIE( "Not implemented." );
+    $filename_offset //= '';
+
+    my $iterator;
+    eval {
+        $iterator = CopyKVS::Iterator::PostgresBLOB->new(
+            db                 => $db,
+            schema             => $self->_config_schema,
+            table              => $self->_config_table,
+            id_column          => $self->_config_id_column,
+            primary_key_column => $self->_primary_key_column,
+            offset             => $filename_offset,
+        );
+    };
+    if ( $@ or ( !$iterator ) )
+    {
+        LOGDIE( "Unable to create Amazon S3 iterator for filename offset '" . ( $filename_offset // 'undef' ) . "': $@" );
+        return undef;
+    }
+
+    return $iterator;
 }
 
 no Moose;    # gets rid of scaffolding

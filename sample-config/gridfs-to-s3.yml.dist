@@ -72,6 +72,7 @@ connectors:
         username        : "backup"
         password        : "backup1"
         database        : "backup"
+        schema          : "public"
         # Table in which BLOBs are being stored
         table           : "binary_blobs"
         # Column of type "bytea" in said table with BLOBs

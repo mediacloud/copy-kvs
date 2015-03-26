@@ -11,6 +11,9 @@ WriteMakefile(
         : () ),
     PREREQ_PM => {
         'App::githook_perltidy'           => '0.10.2',
+        'DBD::Pg'                         => '3.5.1',
+        'DBI'                             => '1.633',
+        'DBIx::Simple'                    => '1.35',
         'File::Slurp'                     => 9999.19,
         'FindBin'                         => 0,
         'Log::Log4perl'                   => 1.43,

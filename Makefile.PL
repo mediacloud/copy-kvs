@@ -21,6 +21,7 @@ WriteMakefile(
         'Moose'                           => '2.1005',
         'Net::Amazon::S3'                 => 0.59,
         'Parallel::Fork::BossWorkerAsync' => 0.08,
+        'Readonly'                        => '2.00',
         'YAML'                            => 0.90,
 
         # test

@@ -48,9 +48,82 @@ sub next($)
 {
     my ( $self ) = @_;
 
-    die "Not implemented.";
+    if ( scalar( @{ $self->_filenames } ) == 0 )
+    {
+        if ( $self->_end_of_data )
+        {
+            # Last fetched chunk was the end of the list
+            return undef;
+        }
+
+        my $schema             = $self->_config_schema;
+        my $table              = $self->_config_table;
+        my $id_column          = $self->_config_id_column;
+        my $primary_key_column = $self->_config_primary_key_column;
+        my $offset             = $self->_offset;
+
+        # Fetch a new chunk
+        my $objects;
+        if ( $offset ne '' )
+        {
+            DEBUG( "Will resume from offset $offset" );
+            $objects = $self->_db->query(
+                <<"EOF",
+                SELECT $id_column AS filename
+                FROM $schema.$table
+                WHERE $primary_key_column > (
+                    SELECT $primary_key_column
+                    FROM $schema.$table
+                    WHERE $id_column = ?
+                )
+                ORDER BY $primary_key_column
+                LIMIT ?
+EOF
+                $self->_offset, $POSTGRESBLOB_ITERATOR_CHUNK_SIZE
+            )->hashes;
+        }
+        else
+        {
+            DEBUG( "Will resume from the beginning" );
+            $objects = $self->_db->query(
+                <<"EOF",
+                SELECT $id_column AS filename
+                FROM $schema.$table
+                ORDER BY $primary_key_column
+                LIMIT ?
+EOF
+                $POSTGRESBLOB_ITERATOR_CHUNK_SIZE
+            )->hashes;
+        }
+
+        unless ( $objects )
+        {
+            LOGDIE( "Unable to fetch a chunk of objects for offset $offset" );
+        }
+
+        # Store the chunk of filenames locally
+        for my $object ( @{ $objects } )
+        {
+            my $object_filename = $object->{ filename };
+            push( @{ $self->_filenames }, $object_filename );
+        }
+
+        # Write down the new offset
+        if ( scalar @{ $objects } )
+        {
+            # Use the last filename
+            $self->_offset( $self->_filenames->[ -1 ] );
+        }
+        else
+        {
+            # No more objects to be fetched
+            $self->_end_of_data( 1 );
+        }
+    }
+
+    return shift( @{ $self->_filenames } );
 }
 
-no Moose;                                         # gets rid of scaffolding
+no Moose;    # gets rid of scaffolding
 
 1;

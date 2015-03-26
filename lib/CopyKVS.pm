@@ -87,6 +87,21 @@ sub _new_storage_handler($$)
         );
 
     }
+    elsif ( lc( $connector_type ) eq lc( 'PostgresBLOB' ) )
+    {
+
+        $handler = CopyKVS::Handler::PostgresBLOB->new(
+            host => $connector->{ host } || 'localhost',
+            port => $connector->{ port } || 5432,
+            username => $connector->{ username },
+            password => $connector->{ password },
+            database => $connector->{ database },
+            schema   => $connector->{ schema } || 'public',
+            table    => $connector->{ table },
+            column   => $connector->{ column },
+        );
+
+    }
     else
     {
 

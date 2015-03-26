@@ -9,6 +9,14 @@ sub random_string($)
     return join '', map +( 0 .. 9, 'a' .. 'z', 'A' .. 'Z' )[ rand( 10 + 26 * 2 ) ], 1 .. $num_bytes;
 }
 
+sub postgres_test_configuration_is_set()
+{
+    return (  defined $ENV{ COPY_KVS_POSTGRES_HOST }
+          and defined $ENV{ COPY_KVS_POSTGRES_USERNAME }
+          and defined $ENV{ COPY_KVS_POSTGRES_PASSWORD }
+          and defined $ENV{ COPY_KVS_POSTGRES_DATABASE } );
+}
+
 sub s3_test_configuration_is_set()
 {
     return (  defined $ENV{ COPY_KVS_S3_ACCESS_KEY_ID }
@@ -48,6 +56,19 @@ sub configuration_from_env()
                 overwrite        => 1,
                 last_copied_file => "copy-kvs-s3-" . random_string( 16 ) . ".last",
             },
+            "postgres_blob" => {
+                type             => "PostgresBLOB",
+                host             => $ENV{ COPY_KVS_POSTGRES_HOST },
+                port             => 5432,
+                username         => $ENV{ COPY_KVS_POSTGRES_USERNAME },
+                password         => $ENV{ COPY_KVS_POSTGRES_PASSWORD },
+                database         => $ENV{ COPY_KVS_POSTGRES_DATABASE },
+                schema           => "public",
+                table            => "binary_blobs_test_" . random_string( 16 ),
+                id_column        => "object_id",
+                data_column      => "data",
+                last_copied_file => "copy-kvs-postgres-" . random_string( 16 ) . ".last",
+            }
         }
     };
 

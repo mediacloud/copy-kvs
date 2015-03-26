@@ -24,9 +24,10 @@ else
     plan skip_all => "S3 test configuration is not set in the environment.";
 }
 
-use constant NUMBER_OF_TEST_FILES => 10;
-
 use Data::Dumper;
+use Readonly;
+
+Readonly my $NUMBER_OF_TEST_FILES => 10;
 
 BEGIN
 {
@@ -86,7 +87,7 @@ my $gridfs_destination                = CopyKVS::Handler::GridFS->new(
 
 # Create test files
 my @files;
-for ( my $x = 0 ; $x < NUMBER_OF_TEST_FILES ; ++$x )
+for ( my $x = 0 ; $x < $NUMBER_OF_TEST_FILES ; ++$x )
 {
     push( @files, { filename => 'file-' . random_string( 32 ), contents => random_string( 128 ) } );
 }

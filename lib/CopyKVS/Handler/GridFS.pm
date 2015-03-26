@@ -15,14 +15,15 @@ use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
 
 use POSIX qw(floor);
+use Readonly;
 
 use CopyKVS::Iterator::GridFS;
 
 # MongoDB's number of read / write attempts
 # (in case waiting 60 seconds for the read / write to happen doesn't help, the instance should
 #  retry writing a couple of times)
-use constant MONGODB_READ_ATTEMPTS  => 3;
-use constant MONGODB_WRITE_ATTEMPTS => 3;
+Readonly my $MONGODB_READ_ATTEMPTS  => 3;
+Readonly my $MONGODB_WRITE_ATTEMPTS => 3;
 
 # Configuration
 has '_config_host'     => ( is => 'rw' );
@@ -45,11 +46,11 @@ sub BUILD
     my $self = shift;
     my $args = shift;
 
-    if ( MONGODB_READ_ATTEMPTS < 1 )
+    if ( $MONGODB_READ_ATTEMPTS < 1 )
     {
         LOGDIE( "MONGODB_READ_ATTEMPTS must be >= 1" );
     }
-    if ( MONGODB_WRITE_ATTEMPTS < 1 )
+    if ( $MONGODB_WRITE_ATTEMPTS < 1 )
     {
         LOGDIE( "MONGODB_WRITE_ATTEMPTS must be >= 1" );
     }
@@ -94,10 +95,10 @@ sub _connect_to_mongodb_or_die($)
         return;
     }
 
-    # Timeout should "fit in" at least MONGODB_READ_ATTEMPTS number of retries
+    # Timeout should "fit in" at least $MONGODB_READ_ATTEMPTS number of retries
     # within the time period (unless it's "no timeout")
     my $query_timeout =
-      ( $self->_config_timeout == -1 ? -1 : floor( ( $self->_config_timeout / MONGODB_READ_ATTEMPTS ) - 1 ) );
+      ( $self->_config_timeout == -1 ? -1 : floor( ( $self->_config_timeout / $MONGODB_READ_ATTEMPTS ) - 1 ) );
     if ( $query_timeout != -1 and $query_timeout < 10 )
     {
         LOGDIE( "MongoDB query timeout ($query_timeout s) is too small." );
@@ -147,7 +148,7 @@ sub _connect_to_mongodb_or_die($)
     INFO(
         "Initialized GridFS storage at " . $self->_config_host . ":" . $self->_config_port . "/" . $self->_config_database .
           ") with query timeout = " . ( $query_timeout == -1 ? "no timeout" : "$query_timeout s" ) .
-          ", read attempts = " . MONGODB_READ_ATTEMPTS . ", write attempts = " . MONGODB_WRITE_ATTEMPTS );
+          ", read attempts = $MONGODB_READ_ATTEMPTS, write attempts = $MONGODB_WRITE_ATTEMPTS" );
 }
 
 sub head($$)
@@ -160,7 +161,7 @@ sub head($$)
     # so we'll try to read several times
     my $attempt_to_head_succeeded = 0;
     my $file                      = undef;
-    for ( my $retry = 0 ; $retry < MONGODB_READ_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $MONGODB_READ_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -187,7 +188,7 @@ sub head($$)
 
     unless ( $attempt_to_head_succeeded )
     {
-        LOGDIE( "Unable to HEAD '$filename' on GridFS after " . MONGODB_READ_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to HEAD '$filename' on GridFS after $MONGODB_READ_ATTEMPTS retries." );
     }
 
     if ( $file )
@@ -209,7 +210,7 @@ sub delete($$)
     # MongoDB sometimes times out when deleting because it's busy creating a new data file,
     # so we'll try to delete several times
     my $attempt_to_delete_succeeded = 0;
-    for ( my $retry = 0 ; $retry < MONGODB_WRITE_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $MONGODB_WRITE_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -240,7 +241,7 @@ sub delete($$)
 
     unless ( $attempt_to_delete_succeeded )
     {
-        LOGDIE( "Unable to delete '$filename' from GridFS after " . MONGODB_WRITE_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to delete '$filename' from GridFS after $MONGODB_WRITE_ATTEMPTS retries." );
     }
 
     return 1;
@@ -256,7 +257,7 @@ sub put($$$)
 
     # MongoDB sometimes times out when writing because it's busy creating a new data file,
     # so we'll try to write several times
-    for ( my $retry = 0 ; $retry < MONGODB_WRITE_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $MONGODB_WRITE_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -294,7 +295,7 @@ sub put($$$)
 
     unless ( $gridfs_id )
     {
-        LOGDIE( "Unable to write '$filename' to GridFS after " . MONGODB_WRITE_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to write '$filename' to GridFS after $MONGODB_WRITE_ATTEMPTS retries." );
     }
 
     return 1;
@@ -310,7 +311,7 @@ sub get($$)
     # so we'll try to read several times
     my $attempt_to_read_succeeded = 0;
     my $file                      = undef;
-    for ( my $retry = 0 ; $retry < MONGODB_READ_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $MONGODB_READ_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -343,7 +344,7 @@ sub get($$)
 
     unless ( $attempt_to_read_succeeded )
     {
-        LOGDIE( "Unable to read '$filename' from GridFS after " . MONGODB_READ_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to read '$filename' from GridFS after $MONGODB_READ_ATTEMPTS retries." );
     }
 
     unless ( defined( $file ) )
@@ -368,7 +369,7 @@ sub list_iterator($;$)
         $iterator = CopyKVS::Iterator::GridFS->new(
             fs_files_collection => $self->_mongodb_fs_files_collection,
             offset              => $filename_offset,
-            read_attempts       => MONGODB_READ_ATTEMPTS
+            read_attempts       => $MONGODB_READ_ATTEMPTS
         );
     };
     if ( $@ or ( !$iterator ) )

@@ -11,8 +11,10 @@ with 'CopyKVS::Iterator';
 use Log::Log4perl qw(:easy);
 Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [%P]: %m%n" } );
 
+use Readonly;
+
 # Number of filenames to cache into $self->_filenames
-use constant GRIDFS_CHUNK_SIZE => 1000;
+Readonly my $GRIDFS_CHUNK_SIZE => 1000;
 
 # for valid_objectid()
 use CopyKVS::Handler::GridFS;
@@ -91,7 +93,7 @@ sub next($)
                 # the next attempt to fetch a list of files, so this will likely
                 # overcome the "skip through gazillion of files" bug
                 my $cursor = $self->_fs_files_collection->query( $find_query )->sort( { _id => 1 } )
-                  ->fields( { _id => 1, filename => 1 } )->limit( GRIDFS_CHUNK_SIZE );
+                  ->fields( { _id => 1, filename => 1 } )->limit( $GRIDFS_CHUNK_SIZE );
                 $cursor->immortal();
                 @objects = $cursor->all;
 

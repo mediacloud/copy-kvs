@@ -16,14 +16,15 @@ Log::Log4perl->easy_init( { level => $DEBUG, utf8 => 1, layout => "%d{ISO8601} [
 use Net::Amazon::S3 0.59;
 
 use POSIX qw(floor);
+use Readonly;
 
 use CopyKVS::Iterator::AmazonS3;
 
 # S3's number of read / write attempts
 # (in case waiting 20 seconds for the read / write to happen doesn't help, the instance should
 # retry writing a couple of times)
-use constant AMAZON_S3_READ_ATTEMPTS  => 3;
-use constant AMAZON_S3_WRITE_ATTEMPTS => 3;
+Readonly my $AMAZON_S3_READ_ATTEMPTS  => 3;
+Readonly my $AMAZON_S3_WRITE_ATTEMPTS => 3;
 
 # Configuration
 has '_config_access_key_id'        => ( is => 'rw', isa => 'Str' );
@@ -50,11 +51,11 @@ sub BUILD
     my $self = shift;
     my $args = shift;
 
-    if ( AMAZON_S3_READ_ATTEMPTS < 1 )
+    if ( $AMAZON_S3_READ_ATTEMPTS < 1 )
     {
         LOGDIE( "AMAZON_S3_READ_ATTEMPTS must be >= 1" );
     }
-    if ( AMAZON_S3_WRITE_ATTEMPTS < 1 )
+    if ( $AMAZON_S3_WRITE_ATTEMPTS < 1 )
     {
         LOGDIE( "AMAZON_S3_WRITE_ATTEMPTS must be >= 1" );
     }
@@ -90,9 +91,9 @@ sub _initialize_s3_or_die($)
         return;
     }
 
-    # Timeout should "fit in" at least AMAZON_S3_READ_ATTEMPTS number of retries
+    # Timeout should "fit in" at least $AMAZON_S3_READ_ATTEMPTS number of retries
     # within the time period
-    my $request_timeout = floor( ( $self->_config_timeout / AMAZON_S3_READ_ATTEMPTS ) - 1 );
+    my $request_timeout = floor( ( $self->_config_timeout / $AMAZON_S3_READ_ATTEMPTS ) - 1 );
     if ( $request_timeout < 10 )
     {
         LOGDIE( "Amazon S3 request timeout ($request_timeout s) is too small." );
@@ -142,12 +143,13 @@ sub _initialize_s3_or_die($)
     # Save PID
     $self->_pid( $$ );
 
-    my $path =
-      (   $self->_config_directory_name
+    my $path = (
+          $self->_config_directory_name
         ? $self->_config_bucket_name . '/' . $self->_config_directory_name
-        : $self->_config_bucket_name );
+        : $self->_config_bucket_name
+    );
     INFO( "Initialized Amazon S3 storage at '$path' with request timeout = $request_timeout s, read attempts = " .
-          AMAZON_S3_READ_ATTEMPTS . ", write attempts = " . AMAZON_S3_WRITE_ATTEMPTS );
+          "$AMAZON_S3_READ_ATTEMPTS, write attempts = $AMAZON_S3_WRITE_ATTEMPTS" );
 }
 
 sub _path_for_filename($$)
@@ -178,7 +180,7 @@ sub head($$)
     # S3 sometimes times out when reading, so we'll try to read several times
     my $attempt_to_head_succeeded = 0;
     my $file                      = undef;
-    for ( my $retry = 0 ; $retry < AMAZON_S3_READ_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $AMAZON_S3_READ_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -205,7 +207,7 @@ sub head($$)
 
     unless ( $attempt_to_head_succeeded )
     {
-        LOGDIE( "Unable to HEAD '$filename' on S3 after " . AMAZON_S3_READ_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to HEAD '$filename' on S3 after $AMAZON_S3_READ_ATTEMPTS retries." );
     }
 
     if ( $file )
@@ -226,7 +228,7 @@ sub delete($$)
 
     # S3 sometimes times out when deleting, so we'll try to delete several times
     my $attempt_to_delete_succeeded = 0;
-    for ( my $retry = 0 ; $retry < AMAZON_S3_WRITE_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $AMAZON_S3_WRITE_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -266,7 +268,7 @@ sub delete($$)
 
     unless ( $attempt_to_delete_succeeded )
     {
-        LOGDIE( "Unable to delete '$filename' from S3 after " . AMAZON_S3_WRITE_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to delete '$filename' from S3 after $AMAZON_S3_WRITE_ATTEMPTS retries." );
     }
 
     return 1;
@@ -281,7 +283,7 @@ sub put($$$)
     my $write_was_successful = 0;
 
     # S3 sometimes times out when writing, so we'll try to write several times
-    for ( my $retry = 0 ; $retry < AMAZON_S3_WRITE_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $AMAZON_S3_WRITE_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -337,7 +339,7 @@ sub put($$$)
 
     unless ( $write_was_successful )
     {
-        LOGDIE( "Unable to write '$filename' to Amazon S3 after " . AMAZON_S3_WRITE_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to write '$filename' to Amazon S3 after $AMAZON_S3_WRITE_ATTEMPTS retries." );
     }
 
     return 1;
@@ -352,7 +354,7 @@ sub get($$)
     my $value = undef;
 
     # S3 sometimes times out when reading, so we'll try to read several times
-    for ( my $retry = 0 ; $retry < AMAZON_S3_READ_ATTEMPTS ; ++$retry )
+    for ( my $retry = 0 ; $retry < $AMAZON_S3_READ_ATTEMPTS ; ++$retry )
     {
         if ( $retry > 0 )
         {
@@ -395,7 +397,7 @@ sub get($$)
 
     unless ( defined $value )
     {
-        LOGDIE( "Unable to read '$filename' from Amazon S3 after " . AMAZON_S3_READ_ATTEMPTS . " retries." );
+        LOGDIE( "Unable to read '$filename' from Amazon S3 after $AMAZON_S3_READ_ATTEMPTS retries." );
     }
 
     return $value;

@@ -87,9 +87,9 @@ sub _db_handler_for_current_pid($)
         SELECT EXISTS (
             SELECT 1
             FROM information_schema.columns
-            WHERE table_schema = ?
-              AND table_name = ?
-              AND column_name = ?
+            WHERE LOWER(table_schema) = LOWER(?)
+              AND LOWER(table_name) = LOWER(?)
+              AND LOWER(column_name) = LOWER(?)
               AND data_type IN ( 'integer', 'text' )
         )
 EOF
@@ -108,9 +108,9 @@ EOF
         SELECT EXISTS (
             SELECT 1
             FROM information_schema.columns
-            WHERE table_schema = ?
-              AND table_name = ?
-              AND column_name = ?
+            WHERE LOWER(table_schema) = LOWER(?)
+              AND LOWER(table_name) = LOWER(?)
+              AND LOWER(column_name) = LOWER(?)
               AND data_type = 'bytea'
         )
 EOF
@@ -130,7 +130,7 @@ EOF
                 FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS type
             FROM pg_index, pg_class, pg_attribute, pg_namespace 
             WHERE indrelid = pg_class.oid
-              AND nspname = ?
+              AND LOWER(nspname) = ?
               AND pg_class.oid = ?::regclass
               AND pg_class.relnamespace = pg_namespace.oid
               AND pg_attribute.attrelid = pg_class.oid

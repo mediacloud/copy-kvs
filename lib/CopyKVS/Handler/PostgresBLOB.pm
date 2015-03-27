@@ -97,8 +97,8 @@ EOF
     )->flat;
     unless ( $id_column_exists[ 0 ] + 0 )
     {
-        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " .
-              "does not exist or does not have ID column " . "'$self->_config_id_column' of correct type" );
+        LOGDIE( 'Table "' . $self->_config_table . '" in schema "' . $self->_config_schema .
+              '" does not exist or does not have ID column "' . $self->_config_id_column . '" of correct type' );
     }
 
     # Check whether the table exists, has the required data column, and the
@@ -118,8 +118,8 @@ EOF
     )->flat;
     unless ( $data_column_exists[ 0 ] + 0 )
     {
-        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " .
-              "does not exist or does not have data column " . "'$self->_config_data_column' of type BYTEA" );
+        LOGDIE( 'Table "' . $self->_config_table . '" in schema "' . $self->_config_schema .
+              '" does not exist or does not have ID column "' . $self->_config_data_column . '" of type BYTEA' );
     }
 
     # Get primary key column name (which will be used by the iterator for resuming)
@@ -141,11 +141,13 @@ EOF
     )->hashes;
     if ( scalar @{ $primary_key_columns } == 0 )
     {
-        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " . "does not have a primary column" );
+        LOGDIE( 'Table "' .
+              $self->_config_table . '" in schema "' . $self->_config_schema . '" does not have a primary column' );
     }
     if ( scalar @{ $primary_key_columns } > 1 )
     {
-        LOGDIE( "Table '$self->_config_table' in schema '$self->_config_schema' " . "has more than one primary column" );
+        LOGDIE( 'Table "' .
+              $self->_config_table . '" in schema "' . $self->_config_schema . '" has more than one primary column' );
     }
     my $primary_key_column = $primary_key_columns->[ 0 ]->{ name };
     unless ( $primary_key_column )
@@ -306,7 +308,7 @@ sub list_iterator($;$)
     };
     if ( $@ or ( !$iterator ) )
     {
-        LOGDIE( "Unable to create Amazon S3 iterator for filename offset '" . ( $filename_offset // 'undef' ) . "': $@" );
+        LOGDIE( 'Unable to create Amazon S3 iterator for filename offset "' . ( $filename_offset // 'undef' ) . "': $@" );
         return undef;
     }
 

@@ -277,7 +277,7 @@ EOF
         $filename
     )->flat;
 
-    unless ( $contents->[ 0 ] )
+    unless ( defined $contents->[ 0 ] )
     {
         LOGDIE( "Object with ID '$filename' was not found" );
     }

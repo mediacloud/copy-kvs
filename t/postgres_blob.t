@@ -13,10 +13,11 @@ require 't/test_helpers.inc.pl';
 
 use Test::More;
 use Test::Deep;
+use Readonly;
 
 if ( postgres_test_configuration_is_set() )
 {
-    plan tests => 3;
+    plan tests => 161;
 }
 else
 {
@@ -90,6 +91,69 @@ my $postgres_handler = CopyKVS::Handler::PostgresBLOB->new(
     data_column => $postgres_connector->{ data_column },
 );
 ok( $postgres_handler, "PostgresBLOB handler initialized" );
+
+sub test_store_fetch_object($$)
+{
+    my ( $postgres_handler, $test_content ) = @_;
+
+    my $test_filename = '12345';
+    my $returned_content;
+
+    # Store, fetch content
+    ok( $postgres_handler->put( $test_filename, $test_content ), "Storing filename '$test_filename' did not return true" );
+    ok( $postgres_handler->head( $test_filename ), "head() does not report that the file exists" );
+    $returned_content = $postgres_handler->get( $test_filename );
+    ok( defined $returned_content, "Getting filename '$test_filename' did not return contents" );
+    is( $test_content, $returned_content, "Content doesn't match" );
+    ok( $postgres_handler->delete( $test_filename ), "Deleting filename '$test_filename' did not return true" );
+    ok( !$postgres_handler->head( $test_filename ),  "head() reports that the file that was just removed still exists" );
+
+    # Store content twice
+    ok( $postgres_handler->put( $test_filename, $test_content ), "Storing filename '$test_filename' did not return true" );
+    ok( $postgres_handler->put( $test_filename, $test_content ),
+        "Storing filename '$test_filename' the second time did not return true" );
+    ok( $postgres_handler->head( $test_filename ), "head() does not report that the file exists" );
+    $returned_content = $postgres_handler->get( $test_filename );
+    ok( defined $returned_content, "Getting filename '$test_filename' did not return contents" );
+    is( $test_content, $returned_content, "Content doesn't match" );
+    ok( $postgres_handler->delete( $test_filename ), "Deleting filename '$test_filename' did not return true" );
+    ok( !$postgres_handler->head( $test_filename ),  "head() reports that the file that was just removed still exists" );
+
+}
+
+Readonly my @test_strings => (
+
+    # ASCII
+    "Media Cloud\r\nMedia Cloud\nMedia Cloud\r\n",
+
+    # UTF-8
+    "Media Cloud\r\nąčęėįšųūž\n您好\r\n",
+
+    # Empty string
+    "",
+
+    # Invalid UTF-8 sequences
+    "\xc3\x28",
+    "\xa0\xa1",
+    "\xe2\x28\xa1",
+    "\xe2\x82\x28",
+    "\xf0\x28\x8c\xbc",
+    "\xf0\x90\x28\xbc",
+    "\xf0\x28\x8c\x28",
+    "\xf8\xa1\xa1\xa1\xa1",
+    "\xfc\xa1\xa1\xa1\xa1\xa1",
+
+);
+
+foreach my $test_string ( @test_strings )
+{
+    test_store_fetch_object( $postgres_handler, $test_string );
+}
+
+# Try fetching nonexistent filename
+eval { $postgres_handler->get( '99999' ); };
+ok( $@,                                  "Fetching file that does not exist should have failed" );
+ok( !$postgres_handler->head( '99999' ), "head() does not report that the nonexistent file exists" );
 
 # Drop test table
 $db->query(

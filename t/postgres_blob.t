@@ -61,8 +61,6 @@ my $table_name  = $postgres_connector->{ table };
 my $id_column   = $postgres_connector->{ id_column };
 my $data_column = $postgres_connector->{ data_column };
 
-$db->begin_work;
-
 $db->query(
     <<"EOF"
     CREATE TABLE $schema_name.$table_name (
@@ -99,5 +97,3 @@ $db->query(
     DROP TABLE $schema_name.$table_name
 EOF
 );
-
-$db->commit;

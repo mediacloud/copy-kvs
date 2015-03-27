@@ -85,14 +85,14 @@ my $gridfs_destination                = CopyKVS::Handler::GridFS->new(
 );
 
 # Create test files
-my @files;
+my @files_src;
 for ( my $x = 0 ; $x < $NUMBER_OF_TEST_FILES ; ++$x )
 {
-    push( @files, { filename => 'file-' . random_string( 32 ), contents => random_string( 128 ) } );
+    push( @files_src, { filename => 'file-' . random_string( 32 ), contents => random_string( 128 ) } );
 }
 
 # Store files into the source GridFS database
-for my $file ( @files )
+for my $file ( @files_src )
 {
     $gridfs_source->put( $file->{ filename }, $file->{ contents } );
 }
@@ -105,39 +105,31 @@ ok( CopyKVS::copy_kvs( $config, "mongodb_gridfs_test", "amazon_s3_test" ), "Copy
 $config->{ connectors }->{ "mongodb_gridfs_test" }->{ database } = $test_destination_database_name;
 ok( CopyKVS::copy_kvs( $config, "amazon_s3_test", "mongodb_gridfs_test" ), "Copy from S3 to destination GridFS" );
 
-# Compare files
-my $response = $test_bucket->list_all( { prefix => $s3_connector->{ directory_name } } );
-my @files_restored_from_s3;
-foreach my $key ( @{ $response->{ keys } } )
-{
-    my $file = $test_bucket->get_key( $key->{ key } );
-    $file = {
-        filename => $key->{ key },
-        contents => $file->{ value }
-    };
-    if ( $s3_connector->{ directory_name } )
-    {
-        # Strip directory prefix
-        $file->{ filename } =~ s/^$s3_connector->{ directory_name }\///;
-    }
-    push( @files_restored_from_s3, $file );
-}
-
-# say STDERR "Expected: " . Dumper(@files);
-# say STDERR "Got: " . Dumper(@files_restored_from_s3);
-cmp_bag( \@files_restored_from_s3, \@files,
-    'List of files and their contents match; got: ' .
-      Dumper( \@files_restored_from_s3 ) . '; expected: ' . Dumper( \@files ) );
-
 # Delete temporary bucket and databases, remove "last filename" files
-$response = $test_bucket->list_all( { prefix => $s3_connector->{ directory_name } } );
+my $response = $test_bucket->list_all( { prefix => $s3_connector->{ directory_name } } );
 foreach my $key ( @{ $response->{ keys } } )
 {
+    say STDERR "Removing temporary file " . $key->{ key } . "...";
     $test_bucket->delete_key( $key->{ key } );
 }
+unlink $config->{ connectors }->{ "mongodb_gridfs_test" }->{ last_copied_file };
+unlink $config->{ connectors }->{ "amazon_s3_test" }->{ last_copied_file };
+
+my @files_dst;
+
+my @dst_files_list = $native_destination_mongo_database->get_gridfs->all();
+foreach my $file ( @dst_files_list )
+{
+    $file = {
+        filename => $file->info->{ 'filename' },
+        contents => $file->slurp,
+    };
+    push( @files_dst, $file );
+}
+
+# Compare files between source and destination GridFS databases
+cmp_bag( \@files_dst, \@files_src,
+    'List of files and their contents match; got: ' . Dumper( \@files_dst ) . '; expected: ' . Dumper( \@files_src ) );
 
 $native_source_mongo_database->drop;
 $native_destination_mongo_database->drop;
-
-unlink $config->{ connectors }->{ "mongodb_gridfs_test" }->{ last_copied_file };
-unlink $config->{ connectors }->{ "amazon_s3_test" }->{ last_copied_file };

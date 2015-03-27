@@ -2,6 +2,9 @@
 use strict;
 use warnings;
 
+use DBI;
+use DBIx::Simple;
+
 # Generate random alphanumeric string (password or token) of the specified length
 sub random_string($)
 {
@@ -56,7 +59,7 @@ sub configuration_from_env()
                 overwrite        => 1,
                 last_copied_file => "copy-kvs-s3-" . random_string( 16 ) . ".last",
             },
-            "postgres_blob" => {
+            "postgres_blob_test" => {
                 type             => "PostgresBLOB",
                 host             => $ENV{ COPY_KVS_POSTGRES_HOST },
                 port             => 5432,
@@ -73,6 +76,65 @@ sub configuration_from_env()
     };
 
     return $test_config;
+}
+
+sub initialize_test_postgresql_table($)
+{
+    my $postgres_connector = shift;
+
+    # Connect to database
+    my $dsn = sprintf(
+        'dbi:Pg:dbname=%s;host=%s;port=%d',    #
+        $postgres_connector->{ database },     #
+        $postgres_connector->{ host },         #
+        $postgres_connector->{ port }          #
+    );
+
+    say STDERR "Connecting to DSN '$dsn'...";
+    my $db = DBIx::Simple->connect(
+        $dsn,                                  #
+        $postgres_connector->{ username },     #
+        $postgres_connector->{ password }      #
+    );
+
+    # Create test table
+    my $schema_name = $postgres_connector->{ schema };
+    my $table_name  = $postgres_connector->{ table };
+    my $id_column   = $postgres_connector->{ id_column };
+    my $data_column = $postgres_connector->{ data_column };
+
+    $db->query(
+        <<"EOF"
+        CREATE TABLE $schema_name.$table_name (
+        ${table_name}_id    SERIAL      PRIMARY KEY,
+        $id_column          INTEGER     NOT NULL,
+        $data_column        BYTEA       NOT NULL
+    )
+EOF
+    );
+    $db->query(
+        <<"EOF"
+        CREATE UNIQUE INDEX ${table_name}_${id_column}
+        ON ${schema_name}.${table_name} ($id_column);
+EOF
+    );
+
+    return $db;
+}
+
+sub drop_test_postgresql_table($$)
+{
+    my ( $db, $postgres_connector ) = @_;
+
+    my $schema_name = $postgres_connector->{ schema };
+    my $table_name  = $postgres_connector->{ table };
+
+    # Drop test table
+    $db->query(
+        <<"EOF"
+        DROP TABLE $schema_name.$table_name
+EOF
+    );
 }
 
 1;

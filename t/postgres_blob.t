@@ -38,45 +38,11 @@ BEGIN
 # Connection configuration
 my $config = configuration_from_env();
 
-my $postgres_connector = $config->{ connectors }->{ postgres_blob };
+my $postgres_connector = $config->{ connectors }->{ "postgres_blob_test" };
 ok( $postgres_connector, "PostgreSQL test connector is set in the configuration" );
 
-my $dsn = sprintf(
-    'dbi:Pg:dbname=%s;host=%s;port=%d',    #
-    $postgres_connector->{ database },     #
-    $postgres_connector->{ host },         #
-    $postgres_connector->{ port }          #
-);
-
-say STDERR "Connecting to DSN '$dsn'...";
-my $db = DBIx::Simple->connect(
-    $dsn,                                  #
-    $postgres_connector->{ username },     #
-    $postgres_connector->{ password }      #
-);
+my $db = initialize_test_postgresql_table( $postgres_connector );
 ok( $db, "Connection to database succeeded" );
-
-# Create test table
-my $schema_name = $postgres_connector->{ schema };
-my $table_name  = $postgres_connector->{ table };
-my $id_column   = $postgres_connector->{ id_column };
-my $data_column = $postgres_connector->{ data_column };
-
-$db->query(
-    <<"EOF"
-    CREATE TABLE $schema_name.$table_name (
-    ${table_name}_id    SERIAL      PRIMARY KEY,
-    $id_column          INTEGER     NOT NULL,
-    $data_column        BYTEA       NOT NULL
-)
-EOF
-);
-$db->query(
-    <<"EOF"
-    CREATE UNIQUE INDEX ${table_name}_${id_column}
-    ON ${schema_name}.${table_name} ($id_column);
-EOF
-);
 
 # Initialize handler
 my $postgres_handler = CopyKVS::Handler::PostgresBLOB->new(
@@ -118,7 +84,6 @@ sub test_store_fetch_object($$)
     is( $test_content, $returned_content, "Content doesn't match" );
     ok( $postgres_handler->delete( $test_filename ), "Deleting filename '$test_filename' did not return true" );
     ok( !$postgres_handler->head( $test_filename ),  "head() reports that the file that was just removed still exists" );
-
 }
 
 Readonly my @test_strings => (
@@ -155,9 +120,5 @@ eval { $postgres_handler->get( '99999' ); };
 ok( $@,                                  "Fetching file that does not exist should have failed" );
 ok( !$postgres_handler->head( '99999' ), "head() does not report that the nonexistent file exists" );
 
-# Drop test table
-$db->query(
-    <<"EOF"
-    DROP TABLE $schema_name.$table_name
-EOF
-);
+# Cleanup
+drop_test_postgresql_table( $db, $postgres_connector );

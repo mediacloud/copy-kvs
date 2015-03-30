@@ -321,7 +321,7 @@ sub copy_kvs($$$)
             }
             else
             {
-                DEBUG( "Backed up file '$ref->{filename}'" );
+                DEBUG( "Copied file '$ref->{filename}'" );
             }
         }
 

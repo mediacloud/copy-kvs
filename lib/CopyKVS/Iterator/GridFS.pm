@@ -62,8 +62,10 @@ sub next($)
             eval {
 
                 # Fetch a new chunk
-                # (see README.mdown for the explanation of why we don't use MongoDB::Cursor as
-                # an iterator itself and instead wrap the creation and usage into a single eval{};)
+                #
+                # We don't use MongoDB::Cursor because it crashes with `recv timed out`, then skips a bunch of files.
+                # See https://jira.mongodb.org/browse/PERL-265.
+
                 my $find_query = {};
                 if ( $self->_offset ne '' )
                 {

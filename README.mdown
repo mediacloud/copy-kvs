@@ -1,6 +1,6 @@
 # copy-kvs
 
-Perl script that can be used to copy a lot of objects (files) between [MongoDB GridFS][gridfs] and [Amazon S3][s3].
+Perl script that can be used to copy a lot of objects (files) between [MongoDB GridFS][gridfs], [PostgreSQL BLOBs][postgresql-blob], and [Amazon S3][s3].
 
 ## Build Status
 
@@ -129,5 +129,6 @@ to run unit tests provided with the script.
 ---
 
 [gridfs]: http://docs.mongodb.org/manual/core/gridfs/
+[postgresql-blob]: http://www.postgresql.org/docs/9.3/static/datatype-binary.html
 [s3]: http://aws.amazon.com/s3/
 [mongodb-objectid]: http://docs.mongodb.org/manual/reference/object-id/

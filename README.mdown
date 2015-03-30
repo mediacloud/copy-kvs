@@ -110,6 +110,12 @@ Execute:
     COPY_KVS_S3_ACCESS_KEY_ID="AKIAIOSFODNN7EXAMPLE" \
     COPY_KVS_S3_SECRET_ACCESS_KEY="wJalrXUtnFEMI/K7MDENG/bPxRfiCYzEXAMPLEKEY" \
     COPY_KVS_S3_BUCKET_NAME="copy-kvs-unit-tests" \
+    \
+    COPY_KVS_POSTGRES_HOST="localhost" \
+    COPY_KVS_POSTGRES_USERNAME="copy_kvs_test" \
+    COPY_KVS_POSTGRES_PASSWORD="copy_kvs_test" \
+    COPY_KVS_POSTGRES_DATABASE="copy_kvs_test" \
+    \
     make test
 
 to run unit tests provided with the script.

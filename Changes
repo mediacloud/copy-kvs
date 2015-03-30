@@ -1,6 +1,6 @@
 Revision history for Perl extension CopyKVS.
 
 0.01  Wed Mar 11 22:28:03 2015
-	- original version; created by h2xs 1.23 with options
-		-AX -n CopyKVS
+    - original version; created by h2xs 1.23 with options
+        -AX -n CopyKVS
 

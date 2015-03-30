@@ -57,6 +57,11 @@ For example, if your GridFS deployment contains the following files:
 
 ...the script will copy files `1-8` in any order (because they were inserted during the same second), but will upload files `1-8` before uploading files `9-16` (because the latter were inserted in the next second).
 
+### Sorting in PostgreSQL
+
+When copying **from PostgreSQL**, the script will sort files **by primary key**.
+
+So, unless you do something funky with your primary keys, the objects will be sorted in an insertion order.
 
 ### Sorting in S3
 

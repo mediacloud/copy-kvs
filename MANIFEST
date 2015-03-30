@@ -19,10 +19,12 @@ MANIFEST.SKIP
 README.mdown
 sample-config/gridfs-to-s3.yml.dist
 t/amazon_s3.t
+t/copy_gridfs_to_postgres_to_s3.t
 t/copy_gridfs_to_s3_to_gridfs.t
 t/failures.t
 t/mongodb_gridfs.t
 t/pod.t
+t/postgres_blob.t
 t/test_helpers.inc.pl
 utils/copy-gridfs-to-s3.sh
 utils/copy-s3-to-gridfs.sh

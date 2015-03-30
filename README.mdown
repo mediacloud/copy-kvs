@@ -33,7 +33,7 @@ Install `perltidy` Git hook to automatically fix script formatting:
 
 ### Sorting in GridFS
 
-When copying **from GridFS** to S3, the script will sort files **roughly by insertion date**. The script uses object's `ObjectId` for sorting. As the default `ObjectId` [contains an insertion timestamp (rounded to seconds)][mongodb-objectid], the objects are sorted in 1 second precision.
+When copying **from GridFS**, the script will sort files **roughly by insertion date**. The script uses object's `ObjectId` for sorting. As the default `ObjectId` [contains an insertion timestamp (rounded to seconds)][mongodb-objectid], the objects are sorted in 1 second precision.
 
 For example, if your GridFS deployment contains the following files:
 
@@ -60,7 +60,7 @@ For example, if your GridFS deployment contains the following files:
 
 ### Sorting in S3
 
-When copying **from S3** to GridFS, the script will sort files **in lexicographical order**.
+When copying **from S3**, the script will sort files **in lexicographical order**.
 
 For example, if your S3 bucket contains the following files:
 

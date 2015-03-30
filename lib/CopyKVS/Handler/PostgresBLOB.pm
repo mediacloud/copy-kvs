@@ -158,6 +158,8 @@ EOF
 
     $self->_db( $db );
 
+    INFO( "Initialized PostgresBLOB storage with DSN '" . $dsn . "'" );
+
     return $self->_db;
 }
 

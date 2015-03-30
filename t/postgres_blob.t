@@ -121,4 +121,4 @@ ok( $@,                                  "Fetching file that does not exist shou
 ok( !$postgres_handler->head( '99999' ), "head() does not report that the nonexistent file exists" );
 
 # Cleanup
-drop_test_postgresql_table( $db, $postgres_connector );
+drop_test_postgresql_table( $postgres_connector );

@@ -78,9 +78,9 @@ sub configuration_from_env()
     return $test_config;
 }
 
-sub initialize_test_postgresql_table($)
+sub initialize_test_postgresql_table($;$)
 {
-    my $postgres_connector = shift;
+    my ( $postgres_connector, $skip_creating ) = @_;
 
     # Connect to database
     my $dsn = sprintf(
@@ -97,34 +97,40 @@ sub initialize_test_postgresql_table($)
         $postgres_connector->{ password }      #
     );
 
-    # Create test table
-    my $schema_name = $postgres_connector->{ schema };
-    my $table_name  = $postgres_connector->{ table };
-    my $id_column   = $postgres_connector->{ id_column };
-    my $data_column = $postgres_connector->{ data_column };
+    unless ( $skip_creating )
+    {
+        # Create test table
+        my $schema_name = $postgres_connector->{ schema };
+        my $table_name  = $postgres_connector->{ table };
+        my $id_column   = $postgres_connector->{ id_column };
+        my $data_column = $postgres_connector->{ data_column };
 
-    $db->query(
-        <<"EOF"
-        CREATE TABLE $schema_name.$table_name (
-        ${table_name}_id    SERIAL      PRIMARY KEY,
-        $id_column          INTEGER     NOT NULL,
-        $data_column        BYTEA       NOT NULL
-    )
+        $db->query(
+            <<"EOF"
+            CREATE TABLE $schema_name.$table_name (
+            ${table_name}_id    SERIAL      PRIMARY KEY,
+            $id_column          INTEGER     NOT NULL,
+            $data_column        BYTEA       NOT NULL
+        )
 EOF
-    );
-    $db->query(
-        <<"EOF"
-        CREATE UNIQUE INDEX ${table_name}_${id_column}
-        ON ${schema_name}.${table_name} ($id_column);
+        );
+        $db->query(
+            <<"EOF"
+            CREATE UNIQUE INDEX ${table_name}_${id_column}
+            ON ${schema_name}.${table_name} ($id_column);
 EOF
-    );
+        );
+    }
 
     return $db;
 }
 
-sub drop_test_postgresql_table($$)
+sub drop_test_postgresql_table($)
 {
-    my ( $db, $postgres_connector ) = @_;
+    my ( $postgres_connector ) = @_;
+
+    my $skip_creating = 1;
+    my $db = initialize_test_postgresql_table( $postgres_connector, $skip_creating );
 
     my $schema_name = $postgres_connector->{ schema };
     my $table_name  = $postgres_connector->{ table };

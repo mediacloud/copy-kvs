@@ -1,5 +1,11 @@
 Revision history for Perl extension CopyKVS.
 
+0.02  Mon Mar 30 14:02:00 2015
+    - Added PostgreSQL support
+    - General code cleanup
+    - More unit tests
+    - CI and test coverage support
+
 0.01  Wed Mar 11 22:28:03 2015
     - original version; created by h2xs 1.23 with options
         -AX -n CopyKVS

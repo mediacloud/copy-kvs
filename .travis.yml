@@ -34,6 +34,9 @@ install:
     - sleep 15  # http://docs.travis-ci.com/user/database-setup/#MongoDB-may-not-be-immediately-accepting-connections
     - mongo --version
     - "mongo mydb_test --eval 'db.addUser(\"travis\", \"test\");'"
+    # FIXME install older version of MongoDB Perl driver because the new one has an "empty file" bug:
+    # <https://jira.mongodb.org/browse/PERL-536>
+    - travis_retry cpanm --quiet --notest MongoDB@0.707.1.0
     # Install dependencies
     - travis_retry cpanm --quiet --installdeps --notest .
     # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting

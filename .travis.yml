@@ -32,6 +32,10 @@ install:
     - travis_retry cpanm --quiet --installdeps --notest .
     # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting
     - travis_retry cpanm --quiet --notest Devel::Cover::Report::Coveralls
+before_script:
+    # http://docs.travis-ci.com/user/database-setup/#MongoDB-may-not-be-immediately-accepting-connections
+    - sleep 15
+    - "mongo mydb_test --eval 'db.addUser(\"travis\", \"test\");'"
 script:
     - perl Makefile.PL
     - make

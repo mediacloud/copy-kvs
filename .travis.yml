@@ -7,8 +7,6 @@ addons:
     postgresql: "9.3"
     hosts:
         - copy-kvs.local
-services:
-    - mongodb
 env:
     global:
         # S3 credentials for testing
@@ -28,14 +26,18 @@ before_install:
     - psql -U postgres -c "CREATE USER copy_kvs_test WITH PASSWORD 'copy_kvs_test';"
     - psql -U postgres -c "CREATE DATABASE copy_kvs_test WITH OWNER = copy_kvs_test;"
 install:
+    # Install a specific version of MongoDB
+    - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+    - echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' | sudo tee /etc/apt/sources.list.d/mongodb.list
+    - sudo apt-get update
+    - sudo apt-get install -y mongodb-org=2.6.5 mongodb-org-server=2.6.5 mongodb-org-shell=2.6.5 mongodb-org-mongos=2.6.5 mongodb-org-tools=2.6.5
+    - sleep 15  # http://docs.travis-ci.com/user/database-setup/#MongoDB-may-not-be-immediately-accepting-connections
+    - mongo --version
+    - "mongo mydb_test --eval 'db.addUser(\"travis\", \"test\");'"
     # Install dependencies
     - travis_retry cpanm --quiet --installdeps --notest .
     # Install Devel::Cover::Report::Coveralls for Coveralls.io test coverage reporting
     - travis_retry cpanm --quiet --notest Devel::Cover::Report::Coveralls
-before_script:
-    # http://docs.travis-ci.com/user/database-setup/#MongoDB-may-not-be-immediately-accepting-connections
-    - sleep 15
-    - "mongo mydb_test --eval 'db.addUser(\"travis\", \"test\");'"
 script:
     - perl Makefile.PL
     - make

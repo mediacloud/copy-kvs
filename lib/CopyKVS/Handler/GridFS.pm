@@ -8,6 +8,7 @@ use warnings;
 use Moose;
 with 'CopyKVS::Handler';
 
+use FileHandle;
 use MongoDB 0.700.0;
 use MongoDB::GridFS;
 
@@ -276,7 +277,9 @@ sub put($$$)
             # Write
             my $basic_fh;
             open( $basic_fh, '<', \$contents );
-            $gridfs_id = $self->_mongodb_gridfs->put( $basic_fh, { 'filename' => $filename } );
+            my $fh = FileHandle->new;
+            $fh->fdopen( $basic_fh, 'r' );
+            $gridfs_id = $self->_mongodb_gridfs->put( $fh, { 'filename' => $filename } );
             unless ( $gridfs_id )
             {
                 LOGDIE( "MongoDB's ObjectId is empty." );

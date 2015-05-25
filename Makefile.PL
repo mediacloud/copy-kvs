@@ -15,6 +15,7 @@ WriteMakefile(
         'DBI'                             => '1.633',
         'DBIx::Simple'                    => '1.35',
         'File::Slurp'                     => 9999.19,
+        'FileHandle'                      => 0,
         'FindBin'                         => 0,
         'Log::Log4perl'                   => 1.43,
         'MongoDB'                         => '0.704.1.0',

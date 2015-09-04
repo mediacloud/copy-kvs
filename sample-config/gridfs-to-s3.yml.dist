@@ -9,7 +9,7 @@
 # The script will create the lock file when started; if the lock file is
 # present, another instance of the script will refuse to start. This is to
 # prevent multiple instances of the script from doing the same thing.
-lock_file        : "gridfs-to-s3.lock"
+lock_file       : "gridfs-to-s3.lock"
 
 # How many worker threads to spawn
 worker_threads  : 32

@@ -14,7 +14,7 @@ require 't/test_helpers.inc.pl';
 use Test::More;
 use Test::Deep;
 
-if ( s3_test_configuration_is_set() or postgres_test_configuration_is_set() )
+if ( s3_test_configuration_is_set() and postgres_test_configuration_is_set() )
 {
     plan tests => 4;
 }

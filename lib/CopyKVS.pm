@@ -61,6 +61,17 @@ sub _new_storage_handler($$)
 
     if ( lc( $connector_type ) eq lc( 'AmazonS3' ) )
     {
+        if ( defined $connector->{ overwrite } )
+        {
+            LOGDIE(
+                "'overwrite' property is deprecated in Amazon S3 connector; please use the global 'overwrite' property" );
+        }
+
+        if ( $connector->{ head_before }->{ put } and $config->{ overwrite } )
+        {
+            LOGWARN( "Both 'overwrite' and 'head_before_putting' are enabled, disabling 'head_before_putting'" );
+            $connector->{ head_before }->{ put } = 0;
+        }
 
         $handler = CopyKVS::Handler::AmazonS3->new(
             access_key_id        => $connector->{ access_key_id },
@@ -72,7 +83,6 @@ sub _new_storage_handler($$)
             head_before_putting  => $connector->{ head_before }->{ put } // 0,
             head_before_getting  => $connector->{ head_before }->{ get } // 0,
             head_before_deleting => $connector->{ head_before }->{ delete } // 0,
-            overwrite            => $connector->{ overwrite } // 1,
         );
 
     }
@@ -200,14 +210,23 @@ sub _copy_file_between_connectors
     my $from_connector = $job->{ from_connector };
     my $to_connector   = $job->{ to_connector };
 
+    my $overwrite = $config->{ overwrite } // 1;
+
     eval {
 
         # Get storage handlers for current thread (PID)
         my $from_storage = _storage_handler_for_pid( $config, $from_connector, $$ );
         my $to_storage   = _storage_handler_for_pid( $config, $to_connector,   $$ );
 
-        INFO( "Copying '$filename'..." );
-        $to_storage->put( $filename, $from_storage->get( $filename ) );
+        if ( ( !$overwrite ) and $to_storage->head( $filename ) )
+        {
+            INFO( "Skipping '$filename' because it already exists" );
+        }
+        else
+        {
+            INFO( "Copying '$filename'..." );
+            $to_storage->put( $filename, $from_storage->get( $filename ) );
+        }
 
     };
 

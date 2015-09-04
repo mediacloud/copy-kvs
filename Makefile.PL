@@ -18,7 +18,7 @@ WriteMakefile(
         'FileHandle'                      => 0,
         'FindBin'                         => 0,
         'Log::Log4perl'                   => 1.43,
-        'MongoDB'                         => '0.704.1.0',
+        'MongoDB'                         => '0.708.2.0',
         'Moose'                           => '2.1005',
         'Net::Amazon::S3'                 => 0.59,
         'Parallel::Fork::BossWorkerAsync' => 0.08,

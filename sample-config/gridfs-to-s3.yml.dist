@@ -17,6 +17,13 @@ worker_threads  : 32
 # How many jobs to add to the job pool at once
 job_chunk_size  : 512
 
+# Overwrite objects if they already exist at the destination connector?
+#
+# Please note that if you disable overwriting (set it to 0), additional Amazon
+# S3 charges will be incurred because the copy script will have to HEAD each
+# object before PUTting it
+overwrite       : 1
+
 # Various means to copy objects to / from
 connectors:
 
@@ -56,11 +63,6 @@ connectors:
             get                 : 0
             # HEAD before DELETing a file (1/0)
             delete              : 0
-        # Overwrite the file if it already exists (1/0)?
-        # (if you set it to 0, "head_before->put" will be enabled because in order
-        # to ensure that the file doesn't get overwritten, the script has to check
-        # whether or not the file exists first)
-        overwrite               : 1
         # File in which the last copied filename from S3 is stored
         last_copied_file    : "copy-kvs-s3.last"
 

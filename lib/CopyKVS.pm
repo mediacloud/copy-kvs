@@ -61,6 +61,17 @@ sub _new_storage_handler($$)
 
     if ( lc( $connector_type ) eq lc( 'AmazonS3' ) )
     {
+        if ( defined $connector->{ overwrite } )
+        {
+            LOGDIE(
+                "'overwrite' property is deprecated in Amazon S3 connector; please use the global 'overwrite' property" );
+        }
+
+        if ( $connector->{ head_before }->{ put } and $config->{ overwrite } )
+        {
+            LOGWARN( "Both 'overwrite' and 'head_before_putting' are enabled, disabling 'head_before_putting'" );
+            $connector->{ head_before }->{ put } = 0;
+        }
 
         $handler = CopyKVS::Handler::AmazonS3->new(
             access_key_id        => $connector->{ access_key_id },
@@ -72,7 +83,6 @@ sub _new_storage_handler($$)
             head_before_putting  => $connector->{ head_before }->{ put } // 0,
             head_before_getting  => $connector->{ head_before }->{ get } // 0,
             head_before_deleting => $connector->{ head_before }->{ delete } // 0,
-            overwrite            => $connector->{ overwrite } // 1,
         );
 
     }

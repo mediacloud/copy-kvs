@@ -34,6 +34,7 @@ sub configuration_from_env()
         lock_file      => "copy-kvs.lock",
         worker_threads => 32,
         job_chunk_size => 512,
+        overwrite      => 1,
         connectors     => {
             "mongodb_gridfs_test" => {
                 type             => "GridFS",
@@ -56,7 +57,6 @@ sub configuration_from_env()
                     get    => 0,
                     delete => 0,
                 },
-                overwrite        => 1,
                 last_copied_file => "copy-kvs-s3-" . random_string( 16 ) . ".last",
             },
             "postgres_blob_test" => {

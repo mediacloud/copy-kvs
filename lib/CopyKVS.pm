@@ -210,14 +210,23 @@ sub _copy_file_between_connectors
     my $from_connector = $job->{ from_connector };
     my $to_connector   = $job->{ to_connector };
 
+    my $overwrite = $config->{ overwrite } // 1;
+
     eval {
 
         # Get storage handlers for current thread (PID)
         my $from_storage = _storage_handler_for_pid( $config, $from_connector, $$ );
         my $to_storage   = _storage_handler_for_pid( $config, $to_connector,   $$ );
 
-        INFO( "Copying '$filename'..." );
-        $to_storage->put( $filename, $from_storage->get( $filename ) );
+        if ( ( !$overwrite ) and $to_storage->head( $filename ) )
+        {
+            INFO( "Skipping '$filename' because it already exists" );
+        }
+        else
+        {
+            INFO( "Copying '$filename'..." );
+            $to_storage->put( $filename, $from_storage->get( $filename ) );
+        }
 
     };
 
